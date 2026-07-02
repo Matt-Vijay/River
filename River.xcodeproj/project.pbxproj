@@ -1,0 +1,723 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		001FCDF171A01DF64FCF6C3C /* RiverMessagesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DDE6FADA48EF5E1CAC20FE6D /* RiverMessagesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		22CA8D6B0FE52FC65DA66078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 57E5B88C5F18448B136AFCDA /* Assets.xcassets */; };
+		2F04B808DBB5620A3DEC11B3 /* HoldemUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1B39682C5972343848F71C39 /* HoldemUI */; };
+		4797A2ECCCF169B1F1AB0BEE /* MessagePayloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B55298344D9BED11A8DDF36 /* MessagePayloads.swift */; };
+		545E450F6F93185C362371F8 /* MessagesViewControllerRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B9B41E8664AA23177F443B /* MessagesViewControllerRendering.swift */; };
+		5C4ADE297C1C6A56A967B4FF /* TableMessageCommitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C18CB2666E09E11906B11CC3 /* TableMessageCommitter.swift */; };
+		5D3D97947EB42B5E35DD242B /* MessagesViewControllerActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6457F1587ADAF1ECA25F9C32 /* MessagesViewControllerActions.swift */; };
+		632F0FB500B224DBF55AF44C /* MessageSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934889C5F10566177F293C16 /* MessageSender.swift */; };
+		6916EC64110783B4C01DB3D1 /* TableMessageActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0507926E2BC04405FE8FF4C1 /* TableMessageActions.swift */; };
+		91F519D64FD762574DD375C3 /* TableMessageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 762CD3C9646FE0D9D15E3D99 /* TableMessageRenderer.swift */; };
+		951C6F627D64576BE4E3AEC9 /* MessagesViewControllerSending.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAE8BCDDB6B22926EE89EB3 /* MessagesViewControllerSending.swift */; };
+		AC97923B8D55F223B1CC2225 /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = B159D1CC0CD3BBEA884369F7 /* GameCore */; };
+		B65AB1C170F05B7036007085 /* SwiftUIRootHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B78888EA55E40BBBD6A962D /* SwiftUIRootHost.swift */; };
+		CC988B56E16664FF432CEA31 /* RiverInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DE60D2E3DBDFE9444E8FD6 /* RiverInteractionTests.swift */; };
+		CFFAB57FD1ED094C70FDF1F5 /* MessageTableSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B656B9A32BE7633BFB74021 /* MessageTableSettings.swift */; };
+		D8DCB512F1B83471BCCD8110 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 48F6AA70C1E45D6109515104 /* Assets.xcassets */; };
+		DECE7CD9700D10B2C50F8CB6 /* HoldemUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9EFCAA285187A18349AE0864 /* HoldemUI */; };
+		E9367D7432016BA313BF4C72 /* LatestRevisionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552D5A35020FEA3F30027868 /* LatestRevisionStore.swift */; };
+		F56AF4071696E47B33EEE5C6 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3FFC665F88E5B19DEC3C60C /* MessagesViewController.swift */; };
+		FA88BD673DFE407E56083C3B /* River.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90EB326BDD38F821837BB73D /* River.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		12C55ADDD1D50DC0742A63A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4E53874E8A215A66AC781D6B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3E3BE9AF3612299D01F3E84D;
+			remoteInfo = RiverMessagesExtension;
+		};
+		C4366573FE07CC639142CF97 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4E53874E8A215A66AC781D6B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 05CC57DEB1DF4F4B4D7A8D53;
+			remoteInfo = River;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F4FDE21DDC55F5455E1E7E60 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				001FCDF171A01DF64FCF6C3C /* RiverMessagesExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0507926E2BC04405FE8FF4C1 /* TableMessageActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableMessageActions.swift; sourceTree = "<group>"; };
+		0B656B9A32BE7633BFB74021 /* MessageTableSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageTableSettings.swift; sourceTree = "<group>"; };
+		124313478484E562C7B05A2E /* RiverUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RiverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3B55298344D9BED11A8DDF36 /* MessagePayloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePayloads.swift; sourceTree = "<group>"; };
+		48F6AA70C1E45D6109515104 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		552D5A35020FEA3F30027868 /* LatestRevisionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatestRevisionStore.swift; sourceTree = "<group>"; };
+		57E5B88C5F18448B136AFCDA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5B78888EA55E40BBBD6A962D /* SwiftUIRootHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIRootHost.swift; sourceTree = "<group>"; };
+		6457F1587ADAF1ECA25F9C32 /* MessagesViewControllerActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerActions.swift; sourceTree = "<group>"; };
+		762CD3C9646FE0D9D15E3D99 /* TableMessageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableMessageRenderer.swift; sourceTree = "<group>"; };
+		90B96BDFA512AC6F10342A55 /* GameCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GameCore; path = GameCore; sourceTree = SOURCE_ROOT; };
+		90EB326BDD38F821837BB73D /* River.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = River.swift; sourceTree = "<group>"; };
+		934889C5F10566177F293C16 /* MessageSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSender.swift; sourceTree = "<group>"; };
+		9EAE8BCDDB6B22926EE89EB3 /* MessagesViewControllerSending.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerSending.swift; sourceTree = "<group>"; };
+		A3DE60D2E3DBDFE9444E8FD6 /* RiverInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiverInteractionTests.swift; sourceTree = "<group>"; };
+		A613D5E7BABF2911522EB2F7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A9B9B41E8664AA23177F443B /* MessagesViewControllerRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerRendering.swift; sourceTree = "<group>"; };
+		B316AA8E4AAC03525232432E /* RiverMessages.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RiverMessages.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C18CB2666E09E11906B11CC3 /* TableMessageCommitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableMessageCommitter.swift; sourceTree = "<group>"; };
+		C3FFC665F88E5B19DEC3C60C /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
+		D526E7A4664E477D52C350E2 /* River.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = River.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DDE6FADA48EF5E1CAC20FE6D /* RiverMessagesExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RiverMessagesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		29A62900DE602266D70748C3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F04B808DBB5620A3DEC11B3 /* HoldemUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C8BFF940D8AACC38114ED5C2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC97923B8D55F223B1CC2225 /* GameCore in Frameworks */,
+				DECE7CD9700D10B2C50F8CB6 /* HoldemUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1CA4E7A53AC20049D0610ADF = {
+			isa = PBXGroup;
+			children = (
+				2608724F05BFFBF5AE0B127B /* River */,
+				408D480C036FF465E94F5FE5 /* RiverUITests */,
+				4EF5F113272711B9895F1CA8 /* MessagesExtension */,
+				B1C55574F4E21711CBB3AC23 /* MessagesHost */,
+				D9D9C610AD0B5931ED2A3364 /* Packages */,
+				C5D2B43BA7FFB5E3AE51CE52 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2608724F05BFFBF5AE0B127B /* River */ = {
+			isa = PBXGroup;
+			children = (
+				48F6AA70C1E45D6109515104 /* Assets.xcassets */,
+				90EB326BDD38F821837BB73D /* River.swift */,
+			);
+			path = River;
+			sourceTree = "<group>";
+		};
+		408D480C036FF465E94F5FE5 /* RiverUITests */ = {
+			isa = PBXGroup;
+			children = (
+				A3DE60D2E3DBDFE9444E8FD6 /* RiverInteractionTests.swift */,
+			);
+			path = RiverUITests;
+			sourceTree = "<group>";
+		};
+		4EF5F113272711B9895F1CA8 /* MessagesExtension */ = {
+			isa = PBXGroup;
+			children = (
+				A613D5E7BABF2911522EB2F7 /* Info.plist */,
+				552D5A35020FEA3F30027868 /* LatestRevisionStore.swift */,
+				3B55298344D9BED11A8DDF36 /* MessagePayloads.swift */,
+				934889C5F10566177F293C16 /* MessageSender.swift */,
+				C3FFC665F88E5B19DEC3C60C /* MessagesViewController.swift */,
+				6457F1587ADAF1ECA25F9C32 /* MessagesViewControllerActions.swift */,
+				A9B9B41E8664AA23177F443B /* MessagesViewControllerRendering.swift */,
+				9EAE8BCDDB6B22926EE89EB3 /* MessagesViewControllerSending.swift */,
+				0B656B9A32BE7633BFB74021 /* MessageTableSettings.swift */,
+				5B78888EA55E40BBBD6A962D /* SwiftUIRootHost.swift */,
+				0507926E2BC04405FE8FF4C1 /* TableMessageActions.swift */,
+				C18CB2666E09E11906B11CC3 /* TableMessageCommitter.swift */,
+				762CD3C9646FE0D9D15E3D99 /* TableMessageRenderer.swift */,
+			);
+			path = MessagesExtension;
+			sourceTree = "<group>";
+		};
+		B1C55574F4E21711CBB3AC23 /* MessagesHost */ = {
+			isa = PBXGroup;
+			children = (
+				57E5B88C5F18448B136AFCDA /* Assets.xcassets */,
+			);
+			path = MessagesHost;
+			sourceTree = "<group>";
+		};
+		C5D2B43BA7FFB5E3AE51CE52 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D526E7A4664E477D52C350E2 /* River.app */,
+				124313478484E562C7B05A2E /* RiverUITests.xctest */,
+				B316AA8E4AAC03525232432E /* RiverMessages.app */,
+				DDE6FADA48EF5E1CAC20FE6D /* RiverMessagesExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D9D9C610AD0B5931ED2A3364 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				90B96BDFA512AC6F10342A55 /* GameCore */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		05CC57DEB1DF4F4B4D7A8D53 /* River */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7552C8894C68BE9783CBF404 /* Build configuration list for PBXNativeTarget "River" */;
+			buildPhases = (
+				24EE0FDA08BF4C8E4EE55079 /* Sources */,
+				2566181A4546A1C869CF616A /* Resources */,
+				29A62900DE602266D70748C3 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = River;
+			packageProductDependencies = (
+				1B39682C5972343848F71C39 /* HoldemUI */,
+			);
+			productName = River;
+			productReference = D526E7A4664E477D52C350E2 /* River.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3E3BE9AF3612299D01F3E84D /* RiverMessagesExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0C0500BBA8F3A5C43DEFD487 /* Build configuration list for PBXNativeTarget "RiverMessagesExtension" */;
+			buildPhases = (
+				36390E0E613FA831B0CFC9CA /* Sources */,
+				C8BFF940D8AACC38114ED5C2 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RiverMessagesExtension;
+			packageProductDependencies = (
+				B159D1CC0CD3BBEA884369F7 /* GameCore */,
+				9EFCAA285187A18349AE0864 /* HoldemUI */,
+			);
+			productName = RiverMessagesExtension;
+			productReference = DDE6FADA48EF5E1CAC20FE6D /* RiverMessagesExtension.appex */;
+			productType = "com.apple.product-type.app-extension.messages";
+		};
+		8B25D7D788009E52E5BC9A2D /* RiverUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC68AB02575449B96F9A0410 /* Build configuration list for PBXNativeTarget "RiverUITests" */;
+			buildPhases = (
+				767480E968DF13930A9F1BAD /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				80C76C8F12DAABEF588F2763 /* PBXTargetDependency */,
+			);
+			name = RiverUITests;
+			packageProductDependencies = (
+			);
+			productName = RiverUITests;
+			productReference = 124313478484E562C7B05A2E /* RiverUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		8DC53789EA8E8AE18F3AC73F /* RiverMessages */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 97B8732240136C7DAB04138C /* Build configuration list for PBXNativeTarget "RiverMessages" */;
+			buildPhases = (
+				D3818AA346C4C1D74DBF2DF4 /* Resources */,
+				F4FDE21DDC55F5455E1E7E60 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BDB65FD6DBDB0DF63A3D3D92 /* PBXTargetDependency */,
+			);
+			name = RiverMessages;
+			packageProductDependencies = (
+			);
+			productName = RiverMessages;
+			productReference = B316AA8E4AAC03525232432E /* RiverMessages.app */;
+			productType = "com.apple.product-type.application.messages";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4E53874E8A215A66AC781D6B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8B25D7D788009E52E5BC9A2D = {
+						TestTargetID = 05CC57DEB1DF4F4B4D7A8D53;
+					};
+				};
+			};
+			buildConfigurationList = 4EF85200F82EC0D6D3092297 /* Build configuration list for PBXProject "River" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 1CA4E7A53AC20049D0610ADF;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				10B0ECE9C77A4627C2281014 /* XCLocalSwiftPackageReference "GameCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = C5D2B43BA7FFB5E3AE51CE52 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				05CC57DEB1DF4F4B4D7A8D53 /* River */,
+				8B25D7D788009E52E5BC9A2D /* RiverUITests */,
+				8DC53789EA8E8AE18F3AC73F /* RiverMessages */,
+				3E3BE9AF3612299D01F3E84D /* RiverMessagesExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2566181A4546A1C869CF616A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D8DCB512F1B83471BCCD8110 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D3818AA346C4C1D74DBF2DF4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				22CA8D6B0FE52FC65DA66078 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		24EE0FDA08BF4C8E4EE55079 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA88BD673DFE407E56083C3B /* River.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		36390E0E613FA831B0CFC9CA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E9367D7432016BA313BF4C72 /* LatestRevisionStore.swift in Sources */,
+				4797A2ECCCF169B1F1AB0BEE /* MessagePayloads.swift in Sources */,
+				632F0FB500B224DBF55AF44C /* MessageSender.swift in Sources */,
+				CFFAB57FD1ED094C70FDF1F5 /* MessageTableSettings.swift in Sources */,
+				F56AF4071696E47B33EEE5C6 /* MessagesViewController.swift in Sources */,
+				5D3D97947EB42B5E35DD242B /* MessagesViewControllerActions.swift in Sources */,
+				545E450F6F93185C362371F8 /* MessagesViewControllerRendering.swift in Sources */,
+				951C6F627D64576BE4E3AEC9 /* MessagesViewControllerSending.swift in Sources */,
+				B65AB1C170F05B7036007085 /* SwiftUIRootHost.swift in Sources */,
+				6916EC64110783B4C01DB3D1 /* TableMessageActions.swift in Sources */,
+				5C4ADE297C1C6A56A967B4FF /* TableMessageCommitter.swift in Sources */,
+				91F519D64FD762574DD375C3 /* TableMessageRenderer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		767480E968DF13930A9F1BAD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CC988B56E16664FF432CEA31 /* RiverInteractionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		80C76C8F12DAABEF588F2763 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 05CC57DEB1DF4F4B4D7A8D53 /* River */;
+			targetProxy = C4366573FE07CC639142CF97 /* PBXContainerItemProxy */;
+		};
+		BDB65FD6DBDB0DF63A3D3D92 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3E3BE9AF3612299D01F3E84D /* RiverMessagesExtension */;
+			targetProxy = 12C55ADDD1D50DC0742A63A3 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		31ED1FDD8B251AB4E69A8BA9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CODE_SIGNING_ALLOWED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = MessagesExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.imsg.extension;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		49BA4DB81CFBCF729BC41BA4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		59091A380D1236C2C80BD3FE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = River;
+			};
+			name = Debug;
+		};
+		6C452B9D7E6E6793F0C36F7D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "River";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.imsg;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		7C41739D342D9FC8E1D9C26B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = River;
+			};
+			name = Release;
+		};
+		7CFCFACDC6CA0B3CCA2A3B49 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "River";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.imsg;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		962E77CE74F0153E9BEAB82B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CODE_SIGNING_ALLOWED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = MessagesExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.imsg.extension;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		9801DB21180C283746E37668 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "River";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.app;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		9B04920B49241DCB151FBA0C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "River";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.app;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F9167D9844871C0C6FC667C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0C0500BBA8F3A5C43DEFD487 /* Build configuration list for PBXNativeTarget "RiverMessagesExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				31ED1FDD8B251AB4E69A8BA9 /* Debug */,
+				962E77CE74F0153E9BEAB82B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4EF85200F82EC0D6D3092297 /* Build configuration list for PBXProject "River" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				49BA4DB81CFBCF729BC41BA4 /* Debug */,
+				F9167D9844871C0C6FC667C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7552C8894C68BE9783CBF404 /* Build configuration list for PBXNativeTarget "River" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9801DB21180C283746E37668 /* Debug */,
+				9B04920B49241DCB151FBA0C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		97B8732240136C7DAB04138C /* Build configuration list for PBXNativeTarget "RiverMessages" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7CFCFACDC6CA0B3CCA2A3B49 /* Debug */,
+				6C452B9D7E6E6793F0C36F7D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CC68AB02575449B96F9A0410 /* Build configuration list for PBXNativeTarget "RiverUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				59091A380D1236C2C80BD3FE /* Debug */,
+				7C41739D342D9FC8E1D9C26B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		10B0ECE9C77A4627C2281014 /* XCLocalSwiftPackageReference "GameCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = GameCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1B39682C5972343848F71C39 /* HoldemUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HoldemUI;
+		};
+		9EFCAA285187A18349AE0864 /* HoldemUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HoldemUI;
+		};
+		B159D1CC0CD3BBEA884369F7 /* GameCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GameCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4E53874E8A215A66AC781D6B /* Project object */;
+}

@@ -1,0 +1,9 @@
+.DS_Store
+build/
+DerivedData/
+.swiftpm/
+GameCore/.build/
+GameCore/.swiftpm/
+node_modules
+*.xcuserstate
+xcuserdata/
