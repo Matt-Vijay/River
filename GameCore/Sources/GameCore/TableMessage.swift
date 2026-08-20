@@ -61,9 +61,12 @@ enum Identity {
         var seen: Set<String> = []
         return players.map { player in
             var copy = player
-            var candidate = normalized(copy.id)
+            let base = normalized(copy.id)
+            var candidate = base
+            var suffix = 1
             while !seen.insert(candidate).inserted {
-                candidate = UUID().uuidString
+                candidate = "\(base)-\(suffix)"
+                suffix += 1
             }
             copy.id = candidate
             return copy

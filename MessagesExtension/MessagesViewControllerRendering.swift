@@ -52,6 +52,8 @@ extension MessagesViewController {
                         profile configuredProfile: PlayerProfile,
                         conversation: MSConversation) {
         let hero = heroID(conversation)
+        let selectedLobbyID = lobbySeatIntent
+        lobbySeatIntent = nil
         switch selectedMessage {
         case .none:
             rootHost.setRoot(
@@ -74,7 +76,7 @@ extension MessagesViewController {
 
             switch message {
             case .lobby(let lobby):
-                if lobbySeatIntent == lobby.tableID,
+                if selectedLobbyID == lobby.tableID,
                    lobby.seat(id: hero) == nil,
                    !lobby.isFull {
                     send(.joinLobby(name: configuredProfile.name,
@@ -84,7 +86,6 @@ extension MessagesViewController {
                 }
                 renderLobby(lobby, hero: hero, conversation: conversation)
             case .game(let state):
-                lobbySeatIntent = nil
                 renderGame(state, hero: hero, profile: configuredProfile,
                            conversation: conversation)
             }
