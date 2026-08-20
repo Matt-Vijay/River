@@ -32,13 +32,15 @@ fi
 xcrun simctl boot "$DEVICE_ID" >/dev/null 2>&1 || :
 xcrun simctl bootstatus "$DEVICE_ID" -b
 
-xcodebuild \
-    -project "$ROOT/River.xcodeproj" \
-    -scheme RiverMessages \
-    -destination "platform=iOS Simulator,id=$DEVICE_ID" \
-    -derivedDataPath "$DERIVED_DATA" \
-    -quiet \
-    build-for-testing
+XCODEBUILD_ARGS=(
+    -project "$ROOT/River.xcodeproj"
+    -scheme RiverMessages
+    -destination "platform=iOS Simulator,id=$DEVICE_ID"
+    -derivedDataPath "$DERIVED_DATA"
+    -quiet
+)
+
+xcodebuild "${XCODEBUILD_ARGS[@]}" build-for-testing
 
 if [[ ! -d "$APP_PATH" ]]; then
     print -u2 "RiverMessages build not found at $APP_PATH"
@@ -49,11 +51,6 @@ xcrun simctl terminate "$DEVICE_ID" com.apple.MobileSMS >/dev/null 2>&1 || :
 xcrun simctl uninstall "$DEVICE_ID" com.dewylabs.river >/dev/null 2>&1 || :
 xcrun simctl install "$DEVICE_ID" "$APP_PATH"
 
-xcodebuild \
-    -project "$ROOT/River.xcodeproj" \
-    -scheme RiverMessages \
-    -destination "platform=iOS Simulator,id=$DEVICE_ID" \
-    -derivedDataPath "$DERIVED_DATA" \
+xcodebuild "${XCODEBUILD_ARGS[@]}" \
     -only-testing:RiverMessagesInteractionTests \
-    -quiet \
     test-without-building
