@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "05CC57DEB1DF4F4B4D7A8D53"
+               BlueprintIdentifier = "2E5547EBF3C62BD425B1B3E0"
                BuildableName = "River.app"
                BlueprintName = "River"
                ReferencedContainer = "container:River.xcodeproj">
@@ -32,7 +32,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "05CC57DEB1DF4F4B4D7A8D53"
+            BlueprintIdentifier = "2E5547EBF3C62BD425B1B3E0"
             BuildableName = "River.app"
             BlueprintName = "River"
             ReferencedContainer = "container:River.xcodeproj">
@@ -44,7 +44,7 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8B25D7D788009E52E5BC9A2D"
+               BlueprintIdentifier = "10AF8A55EB905652D7EE2853"
                BuildableName = "RiverUITests.xctest"
                BlueprintName = "RiverUITests"
                ReferencedContainer = "container:River.xcodeproj">
@@ -68,7 +68,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "05CC57DEB1DF4F4B4D7A8D53"
+            BlueprintIdentifier = "2E5547EBF3C62BD425B1B3E0"
             BuildableName = "River.app"
             BlueprintName = "River"
             ReferencedContainer = "container:River.xcodeproj">
@@ -87,7 +87,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "05CC57DEB1DF4F4B4D7A8D53"
+            BlueprintIdentifier = "2E5547EBF3C62BD425B1B3E0"
             BuildableName = "River.app"
             BlueprintName = "River"
             ReferencedContainer = "container:River.xcodeproj">

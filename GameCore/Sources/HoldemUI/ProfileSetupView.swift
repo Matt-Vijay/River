@@ -1,179 +1,122 @@
 import SwiftUI
 import GameCore
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// First-run screen to pick a handle and avatar.
 public struct ProfileSetupView: View {
-    @State private var name: String
-    @State private var avatar: String
+    @State private var name = ""
+    @State private var avatar = "🙂"
     @FocusState private var isHandleFocused: Bool
-    private let onSave: (String, String) -> Void
-    private let onCancel: (() -> Void)?
+    private let onSave: (PlayerProfile) -> Void
 
-    public init(name: String = "",
-                avatar: String = "🙂",
-                onSave: @escaping (String, String) -> Void,
-                onCancel: (() -> Void)? = nil) {
-        _name = State(initialValue: name)
-        _avatar = State(initialValue: avatar)
+    public init(onSave: @escaping (PlayerProfile) -> Void) {
         self.onSave = onSave
-        self.onCancel = onCancel
     }
 
-    private var hasName: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var handle: Binding<String> {
-        Binding(
-            get: { name },
-            set: { name = String($0.prefix(ProfileText.maxNameLength)) }
-        )
+    private var profile: PlayerProfile? {
+        PlayerProfile(name: name, avatar: avatar)
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                header
-                avatarPreview
-                avatarPicker
-                handleField
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 18) {
+                    Text("Create profile")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityAddTraits(.isHeader)
+                    handleField
+                    LazyVGrid(
+                        columns: [
+                            GridItem(
+                                .adaptive(minimum: Metrics.buttonSize, maximum: Metrics.buttonSize),
+                                spacing: Metrics.gridSpacing
+                            )
+                        ],
+                        spacing: Metrics.gridSpacing
+                    ) {
+                        ForEach(CharacterAvatars.all.indices, id: \.self) { index in
+                            let emoji = CharacterAvatars.all[index]
+                            let isSelected = emoji == avatar
+                            Button { avatar = emoji } label: {
+                                Text(emoji)
+                                    .font(.system(size: Metrics.emojiSize))
+                                    .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
+                                    .background(Circle().fill(isSelected ? Color.white.opacity(0.12) : .clear))
+                                    .overlay(Circle().strokeBorder(isSelected ? .white : .clear, lineWidth: 2))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(isSelected ? "Selected character \(emoji)" : "Choose character \(emoji)")
+                            .accessibilityAddTraits(isSelected ? .isSelected : [])
+                            .accessibilityIdentifier(HoldemAccessibility.Profile.avatar(index))
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 24)
             }
+            .scrollDismissesKeyboard(.interactively)
+
+            PrimaryActionButton(
+                title: "Save profile",
+                isDisabled: profile == nil,
+                accessibilityID: HoldemAccessibility.Profile.save,
+                action: saveProfile
+            )
             .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, onCancel == nil ? 96 : 132)
+            .padding(.top, 12)
+            .padding(.bottom, 18)
+            .background(Theme.background)
         }
-        .scrollDismissesKeyboard(.interactively)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background.ignoresSafeArea())
-        .safeAreaInset(edge: .bottom) {
-            actions
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 18)
-                .background(Theme.background)
-        }
-    }
-
-    private var header: some View {
-        Text("Set up your seat")
-            .font(.system(size: 22, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var avatarPreview: some View {
-        Text(avatar)
-            .font(.system(size: 56))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityLabel("Selected character \(avatar)")
-    }
-
-    private var avatarPicker: some View {
-        CharacterPicker(
-            selectedAvatar: avatar,
-            buttonSize: 44,
-            emojiSize: 32,
-            gridSpacing: 12
-        ) { avatar = $0 }
     }
 
     private var handleField: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text("Handle")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
+                .accessibilityHidden(true)
 
-            TextField("", text: handle, prompt: Text("Maverick").foregroundStyle(Theme.secondaryText))
+            TextField("", text: $name, prompt: Text("Maverick").foregroundStyle(Theme.secondaryText))
                 .textFieldStyle(.plain)
                 .textContentType(.nickname)
                 .autocorrectionDisabled()
                 .submitLabel(.done)
                 .focused($isHandleFocused)
-                .onChange(of: name) { _, newValue in
-                    let capped = String(newValue.prefix(ProfileText.maxNameLength))
-                    if capped != newValue {
-                        Task { @MainActor in
-                            name = capped
-                        }
-                    }
-                }
                 .onSubmit {
-                    if hasName { saveProfile() }
+                    if profile != nil { saveProfile() }
                 }
-                .font(.system(size: 18, weight: .semibold))
+                .font(.headline)
                 .foregroundStyle(.white)
+                .accessibilityLabel("Handle")
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Metrics.controlCorner)
-                        .fill(Theme.controlBackground)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.Metrics.controlCorner)
-                                .stroke(Theme.controlStroke, lineWidth: 1)
-                        )
-                )
+                .controlSurface()
                 .accessibilityIdentifier(HoldemAccessibility.Profile.nameField)
-                .modifier(BoundedProfileNameInput(text: $name))
-        }
-    }
-
-    private var actions: some View {
-        VStack(spacing: 12) {
-            Button(action: saveProfile) {
-                Text("Save profile")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .stableOneLineText()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(RoundedRectangle(cornerRadius: Theme.Metrics.controlCorner).fill(hasName ? .white : Theme.secondaryText))
-            }
-            .buttonStyle(PressableButtonStyle())
-            .disabled(!hasName)
-            .accessibilityIdentifier(HoldemAccessibility.Profile.save)
-
-            if let onCancel {
-                Button("Cancel", action: onCancel)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.secondaryText)
-                    .stableOneLineText()
-                    .buttonStyle(PressableButtonStyle())
-                    .accessibilityIdentifier(HoldemAccessibility.Profile.cancel)
-            }
+                .onChange(of: name) {
+                    let bounded = ProfileText.boundedEditingName(name)
+                    if bounded != name {
+                        name = bounded
+                    }
+                }
         }
     }
 
     private func saveProfile() {
+        guard let profile else { return }
         isHandleFocused = false
-        onSave(ProfileText.name(name), ProfileText.avatar(avatar))
+        onSave(profile)
+    }
+
+    private enum Metrics {
+        static let buttonSize: CGFloat = 44
+        static let emojiSize: CGFloat = 32
+        static let gridSpacing: CGFloat = 12
     }
 }
-
-private struct BoundedProfileNameInput: ViewModifier {
-    @Binding var text: String
-
-    func body(content: Content) -> some View {
-        #if canImport(UIKit)
-        content.onReceive(NotificationCenter.default.publisher(for: UITextField.textDidChangeNotification)) { notification in
-            guard let field = notification.object as? UITextField else { return }
-            let value = field.text ?? ""
-            let capped = String(value.prefix(ProfileText.maxNameLength))
-            if value != capped {
-                field.text = capped
-            }
-            if text != capped {
-                text = capped
-            }
-        }
-        #else
-        content
-        #endif
-    }
-}
-
-#Preview("Profile") {
-    ProfileSetupView(onSave: { _, _ in })
+enum CharacterAvatars {
+    static let all = ["🙂", "🧑🏻", "🧑🏼", "🧑🏽", "🧑🏾", "🧑🏿", "👩🏻", "👨🏿", "🐱", "🐶", "🦊", "🐼", "👽"]
 }

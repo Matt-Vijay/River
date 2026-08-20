@@ -11,8 +11,6 @@ let package = Package(
     targets: [
         .target(name: "GameCore"),
         .target(name: "HoldemUI", dependencies: ["GameCore"]),
-        .executableTarget(name: "RenderTable", dependencies: ["GameCore", "HoldemUI"]),
-        .executableTarget(name: "HoldemPlay", dependencies: ["GameCore", "HoldemUI"]),
         .testTarget(name: "GameCoreTests", dependencies: ["GameCore"]),
         .testTarget(name: "HoldemUITests", dependencies: ["GameCore", "HoldemUI"]),
     ]

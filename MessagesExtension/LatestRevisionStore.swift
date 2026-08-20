@@ -2,50 +2,52 @@ import Foundation
 import GameCore
 
 final class LatestRevisionStore {
+    private static let limit = 64
     private let defaults: UserDefaults
     private let key = "HoldemLatestTableRevisions.v1"
+    private lazy var revisions = loadRevisions()
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
     }
 
-    func freshness(of revision: TableRevision) -> TableFreshness {
-        tracker().freshness(of: revision)
+    func latest(for tableID: String) -> TableRevision? {
+        revisions.first { $0.tableID == tableID }
     }
 
-    func snapshot() -> TableRevisionTracker {
-        tracker()
-    }
-
-    func remember(_ revision: TableRevision) {
-        var next = tracker()
-        next.remember(revision)
-        save(next)
-    }
-
-    private func tracker() -> TableRevisionTracker {
-        guard let data = defaults.data(forKey: key) else {
-            return TableRevisionTracker()
+    @discardableResult
+    func observe(_ revision: TableRevision) -> Bool {
+        if let index = revisions.firstIndex(where: { $0.tableID == revision.tableID }) {
+            let latest = revisions[index]
+            guard revision.isSameOrNewer(than: latest) else { return false }
+            guard revision != latest else { return true }
+            revisions.remove(at: index)
         }
+        revisions.append(revision)
+        revisions = Array(revisions.suffix(Self.limit))
+        save(revisions)
+        return true
+    }
 
-        let revisions: [TableRevision]
-        do {
-            revisions = try JSONDecoder().decode([TableRevision].self, from: data)
-        } catch {
+    private func loadRevisions() -> [TableRevision] {
+        guard let data = defaults.data(forKey: key),
+              let revisions = try? JSONDecoder().decode([TableRevision].self, from: data) else {
             defaults.removeObject(forKey: key)
-            return TableRevisionTracker()
+            return []
         }
-
-        return TableRevisionTracker(revisions: revisions)
+        var normalized: [TableRevision] = []
+        for revision in revisions {
+            if let index = normalized.firstIndex(where: { $0.tableID == revision.tableID }) {
+                guard revision.isSameOrNewer(than: normalized[index]) else { continue }
+                normalized.remove(at: index)
+            }
+            normalized.append(revision)
+        }
+        return Array(normalized.suffix(Self.limit))
     }
 
-    private func save(_ tracker: TableRevisionTracker) {
-        let revisions = tracker.latestRevisions
-        do {
-            let data = try JSONEncoder().encode(revisions)
-            defaults.set(data, forKey: key)
-        } catch {
-            defaults.removeObject(forKey: key)
-        }
+    private func save(_ revisions: [TableRevision]) {
+        guard let data = try? JSONEncoder().encode(revisions) else { return }
+        defaults.set(data, forKey: key)
     }
 }

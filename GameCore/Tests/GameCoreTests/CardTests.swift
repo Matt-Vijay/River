@@ -15,14 +15,6 @@ struct CardTests {
         #expect(Card(code: 52) == nil)
     }
 
-    @Test("codes are unique across a full deck")
-    func uniqueCodes() {
-        let codes = Deck().cards.map(\.code)
-        #expect(Set(codes).count == 52)
-        #expect(codes.min() == 0)
-        #expect(codes.max() == 51)
-    }
-
     @Test("ordering is by rank then suit")
     func ordering() {
         #expect(Card(rank: .two, suit: .clubs) < Card(rank: .two, suit: .spades))
@@ -54,5 +46,26 @@ struct CardTests {
         #expect(Card(rank: .jack, suit: .hearts).rank.label == "J")
         #expect(Card(rank: .ace, suit: .hearts).suit.isRed == true)
         #expect(Card(rank: .ace, suit: .clubs).suit.isRed == false)
+    }
+}
+
+@Suite("Deck")
+struct DeckTests {
+    @Test("fresh deck contains every card once in canonical order")
+    func freshDeck() {
+        let deck = Card.fullDeck
+
+        #expect(deck.count == 52)
+        #expect(deck.map(\.code) == Array(0...51))
+    }
+
+    @Test("same seed produces identical shuffle")
+    func deterministicShuffle() {
+        #expect(Card.shuffledDeck(seed: 12345) == Card.shuffledDeck(seed: 12345))
+    }
+
+    @Test("shuffle preserves the full 52-card set")
+    func shufflePreservesSet() {
+        #expect(Set(Card.shuffledDeck(seed: 999)) == Set(Card.fullDeck))
     }
 }

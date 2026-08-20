@@ -7,9 +7,7 @@ struct TimeoutTests {
     @Test("a stale turn facing a bet is folded by the next client")
     func staleFold() {
         let start = Date()
-        var s = GameState.startHand(players: makePlayers([1000, 1000]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 1, handNumber: 1, turnDuration: 30, now: start)
+        var s = timeoutState(start: start)
         // Dealer (to act, facing the BB) goes idle past the clock.
         let later = start.addingTimeInterval(45)
         let resolved = s.resolveTimeout(now: later)
@@ -21,9 +19,7 @@ struct TimeoutTests {
     @Test("a fresh turn is not resolved")
     func freshTurnUntouched() {
         let start = Date()
-        var s = GameState.startHand(players: makePlayers([1000, 1000]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 1, handNumber: 1, turnDuration: 30, now: start)
+        var s = timeoutState(start: start)
         let soon = start.addingTimeInterval(10)
         #expect(s.resolveTimeout(now: soon) == false)
         #expect(s.players[0].status == .active)
@@ -32,22 +28,42 @@ struct TimeoutTests {
     @Test("a turn resolves exactly at the deadline")
     func turnResolvesExactlyAtDeadline() {
         let start = Date()
-        var s = GameState.startHand(players: makePlayers([1000, 1000]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 1, handNumber: 1, turnDuration: 30, now: start)
+        var s = timeoutState(start: start)
 
         let deadline = start.addingTimeInterval(30)
 
+        #expect(TurnClock.remainingSeconds(
+            startedAt: start,
+            duration: 30,
+            at: start.addingTimeInterval(10.25)
+        ) == 20)
+        #expect(TurnClock.remainingFraction(
+            startedAt: start,
+            duration: 30,
+            at: start.addingTimeInterval(15)
+        ) == 0.5)
+        #expect(TurnClock.remainingSeconds(
+            startedAt: start,
+            duration: 30,
+            at: deadline
+        ) == 0)
+        #expect(TurnClock.normalized(.greatestFiniteMagnitude) == TurnClock.maximumDuration)
+
         #expect(s.resolveTimeout(now: deadline) == true)
         #expect(s.players[0].status == .folded)
+
+        var direct = timeoutState(start: start)
+        #expect(direct.apply(.call, by: 0, now: deadline) == false)
+        #expect(direct.players[0].status == .active)
+        let resolvedDirectly = direct.resolveTimeout(now: deadline)
+        #expect(resolvedDirectly)
+        #expect(direct.players[0].status == .folded)
     }
 
     @Test("an invalid current actor index is not resolved")
     func invalidCurrentActorIsIgnored() {
         let start = Date()
-        var s = GameState.startHand(players: makePlayers([1000, 1000]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 1, handNumber: 1, turnDuration: 30, now: start)
+        var s = timeoutState(start: start)
         s.currentToAct = 99
 
         let resolved = s.resolveTimeout(now: start.addingTimeInterval(45))
@@ -60,9 +76,7 @@ struct TimeoutTests {
     @Test("stale non-actable current player is not resolved")
     func staleNonActableCurrentPlayerIsIgnored() {
         let start = Date()
-        var s = GameState.startHand(players: makePlayers([1000, 1000]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 1, handNumber: 1, turnDuration: 30, now: start)
+        var s = timeoutState(start: start)
         s.players[0].status = .folded
 
         let resolved = s.resolveTimeout(now: start.addingTimeInterval(45))
@@ -74,11 +88,8 @@ struct TimeoutTests {
     @Test("a stale actor who has already matched the bet checks")
     func staleActorWithNoCallAmountChecks() {
         let start = Date()
-        var s = GameState.startHand(players: makePlayers([1000, 1000]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 1, handNumber: 1, turnDuration: 30, now: start)
+        var s = timeoutState(start: start)
         s.players[0].bet = 30
-        s.currentBet = 20
 
         let beforeStack = s.players[0].stack
         let resolved = s.resolveTimeout(now: start.addingTimeInterval(45))
@@ -87,5 +98,18 @@ struct TimeoutTests {
         #expect(s.players[0].status == .active)
         #expect(s.players[0].lastAction == .check)
         #expect(s.players[0].stack == beforeStack)
+    }
+
+    private func timeoutState(start: Date) -> GameState {
+        GameState.startHand(
+            players: makePlayers([1000, 1000]),
+            dealerIndex: 0,
+            smallBlind: 10,
+            bigBlind: 20,
+            seed: 1,
+            handNumber: 1,
+            turnDuration: 30,
+            now: start
+        )
     }
 }

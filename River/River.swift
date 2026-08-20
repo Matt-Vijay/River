@@ -5,7 +5,7 @@ import HoldemUI
 struct River: App {
     var body: some Scene {
         WindowGroup {
-            GameTableScreen()
+            GameTableScreen(resetProfile: CommandLine.arguments.contains("-riverResetProfile"))
                 .preferredColorScheme(.dark)
         }
     }

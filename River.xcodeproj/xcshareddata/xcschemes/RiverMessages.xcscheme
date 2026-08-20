@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8DC53789EA8E8AE18F3AC73F"
+               BlueprintIdentifier = "D7CE16DF1CF27F10F182730A"
                BuildableName = "RiverMessages.app"
                BlueprintName = "RiverMessages"
                ReferencedContainer = "container:River.xcodeproj">
@@ -32,14 +32,27 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8DC53789EA8E8AE18F3AC73F"
+            BlueprintIdentifier = "D7CE16DF1CF27F10F182730A"
             BuildableName = "RiverMessages.app"
             BlueprintName = "RiverMessages"
             ReferencedContainer = "container:River.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "5B55FBB87F45D10B7D4C52B7"
+               BuildableName = "RiverMessagesInteractionTests.xctest"
+               BlueprintName = "RiverMessagesInteractionTests"
+               ReferencedContainer = "container:River.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -55,7 +68,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8DC53789EA8E8AE18F3AC73F"
+            BlueprintIdentifier = "D7CE16DF1CF27F10F182730A"
             BuildableName = "RiverMessages.app"
             BlueprintName = "RiverMessages"
             ReferencedContainer = "container:River.xcodeproj">
@@ -74,7 +87,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8DC53789EA8E8AE18F3AC73F"
+            BlueprintIdentifier = "D7CE16DF1CF27F10F182730A"
             BuildableName = "RiverMessages.app"
             BlueprintName = "RiverMessages"
             ReferencedContainer = "container:River.xcodeproj">

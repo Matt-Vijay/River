@@ -1,4 +1,6 @@
+import Foundation
 import Messages
+import UIKit
 import GameCore
 
 enum SelectedTableMessage {
@@ -8,26 +10,70 @@ enum SelectedTableMessage {
 }
 
 enum MessagePayloads {
-    static func selectedTableMessage(in conversation: MSConversation) -> SelectedTableMessage {
-        guard let url = conversation.selectedMessage?.url else { return .none }
+    private static let payloadKey = "g"
+    private static let transportScheme = "data"
+    private static let transportPath = ",river"
+
+    static func tableMessage(from message: MSMessage?) -> SelectedTableMessage {
+        guard let url = message?.url else { return .none }
+        let isCurrentTransport = url.scheme == transportScheme && url.path == transportPath
+        let isLegacyTransport = url.scheme == "holdem" && url.host == "table"
+        guard isCurrentTransport || isLegacyTransport else { return .none }
+        guard let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else {
+            return .invalidPayload
+        }
+        let payloads = items.filter { $0.name == payloadKey }
+        guard payloads.count == 1, let payload = payloads[0].value else {
+            return .invalidPayload
+        }
 
         do {
-            return .message(try GamePayload.decodeMessage(from: url))
+            return .message(try GamePayload.decodeMessage(from: payload))
         } catch {
             return .invalidPayload
         }
     }
 
-    static func makeMessage(for message: TableMessage, in conversation: MSConversation) throws -> MSMessage {
-        let messageView = MSMessage(session: conversation.selectedMessage?.session ?? MSSession())
+    static func revision(from message: MSMessage?) -> TableRevision? {
+        guard case .message(let table) = tableMessage(from: message) else { return nil }
+        return table.revision
+    }
+
+    static func makeMessage(for message: TableMessage,
+                            replacing sourceMessage: MSMessage?) throws -> MSMessage {
+        let session = sourceMessage?.session ?? MSSession()
+        let messageView = MSMessage(session: session)
         let summary = GamePayload.summary(for: message)
         let layout = MSMessageTemplateLayout()
 
-        layout.caption = "River"
-        layout.subcaption = summary
+        layout.image = UIImage(named: "TableMessage")
+        layout.caption = "River Hold’em"
+        layout.trailingCaption = "Open table"
+        switch message {
+        case .lobby(let lobby):
+            layout.subcaption = lobby.isFull
+                ? "Table full"
+                : "\(lobby.seats.count)/\(lobby.maxPlayers) seated"
+            messageView.summaryText = lobby.isFull
+                ? "River Texas Hold’em. Table full. Open table."
+                : "River Texas Hold’em. \(lobby.seats.count) of \(lobby.maxPlayers) seated. Open table."
+        case .game:
+            layout.subcaption = summary
+            messageView.summaryText = "River Texas Hold’em. \(summary). Open table."
+        }
         messageView.layout = layout
-        messageView.summaryText = "River: \(summary)"
-        messageView.url = try GamePayload.encodeToURL(message)
+        messageView.accessibilityLabel = messageView.summaryText
+        var components = URLComponents()
+        components.scheme = transportScheme
+        components.path = transportPath
+        components.queryItems = [
+            URLQueryItem(name: payloadKey, value: try GamePayload.encode(message))
+        ]
+        guard let url = components.url else {
+            throw EncodingError.invalidValue(
+                message, .init(codingPath: [], debugDescription: "Could not build message URL"))
+        }
+        messageView.url = url
 
         return messageView
     }

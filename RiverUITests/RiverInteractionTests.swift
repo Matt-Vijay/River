@@ -7,103 +7,80 @@ final class RiverInteractionTests: XCTestCase {
         super.setUp()
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["-holdemResetProfile"]
+        app.launchArguments = ["-riverResetProfile"]
         app.launch()
     }
 
-    override func tearDown() {
-        app = nil
-        super.tearDown()
-    }
+    func testLobbyToRaiseAndAllInActionFlow() {
+        saveProfile(named: "Maverick")
 
-    func testLobbyToHandRaisePanelAndFoldButtonFlow() {
-        XCTAssertFalse(app.buttons["lobby.addTestPlayer"].waitForExistence(timeout: 1))
+        let startGame = button("lobby.startGame", timeout: 3)
+        XCTAssertFalse(startGame.isEnabled)
 
-        let nameField = textField("profile.name", timeout: 5)
-        nameField.tap()
-        nameField.typeText("Maverick")
+        let addPlayer = button("lobby.addPlayer")
+        assertLabel(addPlayer, equals: "Add player")
+        addPlayer.tap()
+        button("lobby.addPlayer").tap()
+        XCTAssertTrue(startGame.isEnabled)
+        startGame.tap()
 
-        let foxAvatar = button("profile.avatar.9")
-        foxAvatar.tap()
-        assertLabel(foxAvatar, contains: "Selected character")
-        button("profile.save").tap()
-
-        let profileSummary = anyElement("lobby.profileSummary", timeout: 3)
-        assertLabel(profileSummary, contains: "Maverick")
-
-        button("lobby.editProfile").tap()
-
-        XCTAssertTrue(nameField.waitForExistence(timeout: defaultTimeout))
-        XCTAssertEqual(nameField.value as? String, "Maverick")
-
-        button("profile.cancel").tap()
-        XCTAssertTrue(profileSummary.waitForExistence(timeout: defaultTimeout))
-        button("lobby.editProfile").tap()
-
-        XCTAssertTrue(nameField.waitForExistence(timeout: defaultTimeout))
-        XCTAssertEqual(nameField.value as? String, "Maverick")
-        button("profile.save").tap()
-
-        button("lobby.join", timeout: 3).tap()
-        XCTAssertTrue(button("lobby.ready").exists)
-        XCTAssertFalse(app.buttons["lobby.editProfile"].waitForExistence(timeout: 1))
-        XCTAssertFalse(app.descendants(matching: .any)["lobby.profileSummary"].exists)
-
-        let addTestPlayer = button("lobby.addTestPlayer")
-        assertLabel(addTestPlayer, equals: "Add player")
-        addTestPlayer.tap()
-
-        button("lobby.ready").tap()
-
+        revealCurrentHand(expectedPlayer: "Maverick")
         let fold = button("table.action.fold", timeout: 5)
+        assertLabel(anyElement("table.heroSeat"), contains: "Maverick")
 
         button("table.leave").tap()
-
-        button("table.leave.cancel").tap()
+        XCTAssertTrue(app.staticTexts[
+            "Your current hand will be folded. You will sit out future hands."
+        ].exists)
+        button(labeled: "Stay").tap()
         XCTAssertTrue(fold.waitForExistence(timeout: defaultTimeout))
 
-        let raise = app.buttons["table.action.raise.expand"]
-        XCTAssertTrue(raise.exists)
+        let raise = button("table.action.raise.expand")
+        let heroSeatBeforeRaise = anyElement("table.heroSeat").frame
         raise.tap()
 
         let raiseSlider = app.sliders["table.raise.slider"]
         XCTAssertTrue(raiseSlider.waitForExistence(timeout: defaultTimeout))
-        assertRaiseSelectionAfterAdjusting(raiseSlider, to: 0)
-        assertRaiseSelectionAfterAdjusting(raiseSlider, to: 1)
+        XCTAssertEqual(anyElement("table.heroSeat").frame.minY,
+                       heroSeatBeforeRaise.minY,
+                       accuracy: 1,
+                       "Opening raise options must not shift the hero hand")
+        XCTAssertEqual(raiseAmountAfterAdjusting(raiseSlider, to: 0), 20)
+        XCTAssertGreaterThan(raiseAmountAfterAdjusting(raiseSlider, to: 1), 900)
         raiseSlider.adjust(toNormalizedSliderPosition: 0.85)
-        assertLabel(button("table.raise.submit"), contains: "raise to")
+        let adjustedLabel = button("table.raise.submit").label
 
         button("table.raise.preset.1bb").tap()
-        assertLabel(button("table.raise.submit"), contains: "raise to")
+        XCTAssertNotEqual(button("table.raise.submit").label, adjustedLabel)
 
         button("table.raise.preset.pot").tap()
-        assertLabel(button("table.raise.submit"), contains: "raise to")
+        assertLabel(button("table.raise.submit"), equals: "Raise to 35")
 
         button("table.raise.close").tap()
 
-        XCTAssertTrue(raise.waitForExistence(timeout: defaultTimeout))
-        raise.tap()
+        let reopenedRaise = button("table.action.raise.expand")
+        waitUntilHittable(reopenedRaise)
+        reopenedRaise.tap()
 
-        button("table.raise.preset.halfPot").tap()
-
+        button("table.raise.preset.allIn").tap()
         let submitRaise = button("table.raise.submit")
-        assertLabel(submitRaise, contains: "raise to")
+        assertLabel(submitRaise, equals: "Raise to 1,000")
         submitRaise.tap()
 
+        revealCurrentHand(expectedPlayer: "Guest 1")
+        let allInCall = button("table.action.call", timeout: 3)
+        assertLabel(allInCall, contains: "995")
+        allInCall.tap()
+
+        revealCurrentHand(expectedPlayer: "Guest 2")
         XCTAssertTrue(fold.waitForExistence(timeout: defaultTimeout))
         fold.tap()
 
-        let dealNext = button("table.action.dealNext", timeout: 3)
-        assertLabel(anyElement("table.result"), contains: "wins")
-        assertLabel(dealNext, equals: "Deal next hand")
-        dealNext.tap()
-
-        _ = anyElement("table.holeCards", timeout: 3)
-        assertLabel(anyElement("table.board"), equals: "Board empty")
-        XCTAssertFalse(dealNext.exists)
+        assertLabel(anyElement("table.result", timeout: 3), contains: "won")
     }
 
     func testProfileSaveGateAndLocalPersistence() {
+        XCTAssertTrue(app.staticTexts["Create profile"].waitForExistence(timeout: defaultTimeout))
         let nameField = textField("profile.name", timeout: 5)
 
         let saveProfile = app.buttons["profile.save"]
@@ -115,67 +92,99 @@ final class RiverInteractionTests: XCTestCase {
         nameField.tap()
         nameField.typeText(oversizedName)
         waitForValue(nameField, equals: cappedName)
+
+        let foxAvatar = button("profile.avatar.9")
+        foxAvatar.tap()
+        assertLabel(foxAvatar, contains: "Selected character")
+
         XCTAssertTrue(saveProfile.isEnabled)
         saveProfile.tap()
 
-        assertLabel(anyElement("lobby.profileSummary", timeout: 3), contains: cappedName)
+        assertLabel(anyElement("lobby.localSeat", timeout: 3), contains: cappedName)
 
         app.terminate()
         app.launchArguments = []
         app.launch()
 
-        assertLabel(anyElement("lobby.profileSummary", timeout: 3), contains: cappedName)
+        assertLabel(anyElement("lobby.localSeat", timeout: 3), contains: cappedName)
         XCTAssertFalse(app.textFields["profile.name"].exists)
+        XCTAssertFalse(app.buttons["lobby.editProfile"].exists)
     }
 
-    func testProfileRejectsWhitespaceOnlyHandle() {
-        let nameField = textField("profile.name", timeout: 5)
-        let saveProfile = app.buttons["profile.save"]
-        XCTAssertFalse(saveProfile.isEnabled)
-
-        nameField.tap()
-        nameField.typeText("   ")
-
-        XCTAssertFalse(saveProfile.isEnabled)
-        XCTAssertFalse(app.buttons["lobby.join"].waitForExistence(timeout: 1))
-    }
-
-    func testLobbyLeaveRejoinAndTableObservability() {
+    func testLobbyLeaveIsConfirmedAndNeverStartsTheGame() {
         saveProfile(named: "River")
 
-        let join = button("lobby.join", timeout: 3)
-        join.tap()
-
         button("lobby.leave").tap()
-        XCTAssertTrue(join.waitForExistence(timeout: defaultTimeout))
-        assertLabel(anyElement("lobby.profileSummary"), contains: "River")
-        XCTAssertTrue(app.buttons["lobby.editProfile"].exists)
-
-        join.tap()
-        button("lobby.addTestPlayer").tap()
-
-        button("lobby.ready").tap()
-
-        let pot = anyElement("table.pot", timeout: 5)
-        XCTAssertFalse(pot.label.isEmpty)
-
-        assertLabel(anyElement("table.heroSeat"), contains: "River")
-        assertLabel(anyElement("table.heroSeat"), contains: "stack")
-
-        assertLabel(anyElement("table.holeCards"), contains: "hole cards")
+        XCTAssertTrue(
+            app.staticTexts["You will give up your seat in the lobby."]
+                .waitForExistence(timeout: defaultTimeout)
+        )
+        button(labeled: "Stay").tap()
+        XCTAssertTrue(button("lobby.startGame").exists)
+        button("lobby.leave").tap()
+        button("lobby.leave.confirm").tap()
+        XCTAssertFalse(app.buttons["lobby.leave"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["lobby.localSeat"].exists)
+        XCTAssertFalse(button("lobby.startGame").isEnabled)
+        XCTAssertFalse(app.buttons["table.action.fold"].exists)
     }
 
     func testCheckCallProgressesToBoardCardsAndWaitingStates() {
         saveProfile(named: "Caller")
 
-        button("lobby.join", timeout: 3).tap()
-        button("lobby.addTestPlayer").tap()
-        button("lobby.ready").tap()
+        button("lobby.addPlayer").tap()
+        button("lobby.startGame").tap()
+
+        revealCurrentHand(expectedPlayer: "Caller")
+        let guestSeat = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Guest 1,")
+        ).firstMatch
+        XCTAssertTrue(guestSeat.waitForExistence(timeout: defaultTimeout))
+        let board = anyElement("table.board")
+        XCTAssertLessThanOrEqual(
+            guestSeat.frame.maxY,
+            board.frame.minY,
+            "Opponent seats must not overlap the board."
+        )
+        let heroSeat = app.descendants(matching: .any)["table.heroSeat"]
+        if !heroSeat.waitForExistence(timeout: 1) {
+            app.swipeUp()
+        }
+        XCTAssertTrue(heroSeat.waitForExistence(timeout: 3),
+                      "The hero summary must remain reachable by vertical scrolling.")
+        let initialTimerValue = heroSeat.value as? String ?? ""
+        assertLabel(heroSeat, contains: "your turn")
+        XCTAssertFalse(heroSeat.label.localizedCaseInsensitiveContains("clock"))
+        XCTAssertNotNil(
+            initialTimerValue.range(
+                of: #"^\d+ seconds? remaining$"#,
+                options: .regularExpression
+            )
+        )
+        let timerTick = XCTNSPredicateExpectation(
+            predicate: NSPredicate { object, _ in
+                guard let element = object as? XCUIElement,
+                      let value = element.value as? String else {
+                    return false
+                }
+                return value != initialTimerValue && value.range(
+                    of: #"^\d+ seconds? remaining$"#,
+                    options: .regularExpression
+                ) != nil
+            },
+            object: heroSeat
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [timerTick], timeout: 2.5),
+            .completed,
+            "Turn timer accessibility value did not advance"
+        )
 
         let firstCall = button("table.action.call", timeout: 5)
         assertLabel(firstCall, contains: "call")
         firstCall.tap()
 
+        revealCurrentHand(expectedPlayer: "Guest 1")
         button("table.action.check", timeout: 3).tap()
 
         let pot = anyElement("table.pot", timeout: 3)
@@ -183,29 +192,32 @@ final class RiverInteractionTests: XCTestCase {
 
         waitForBoardCardCount(3)
 
-        tapCheckOrCall()
-        tapCheckOrCall()
-        waitForBoardCardCount(4)
+        for expectedCount in [4, 5] {
+            tapCheckOrCall()
+            tapCheckOrCall()
+            revealCurrentHand()
+            waitForBoardCardCount(expectedCount)
+        }
 
         tapCheckOrCall()
         tapCheckOrCall()
-        waitForBoardCardCount(5)
 
-        tapCheckOrCall()
-        tapCheckOrCall()
-
-        assertLabel(anyElement("table.result", timeout: 3), contains: "wins")
+        _ = anyElement("table.result", timeout: 3)
         assertLabel(button("table.action.dealNext"), equals: "Deal next hand")
-        assertLabel(anyElement("table.heroSeat"), contains: "stack")
+        let terminalHeroSeat = anyElement("table.heroSeat")
+        assertLabel(terminalHeroSeat, contains: "stack")
+        XCTAssertTrue((terminalHeroSeat.value as? String ?? "").isEmpty)
+        XCTAssertFalse(terminalHeroSeat.label.localizedCaseInsensitiveContains("clock"))
+        XCTAssertNotEqual(anyElement("table.pot").value as? String, "0")
     }
 
-    func testLeaveConfirmationEndsHeadsUpTable() {
+    func testLeaveConfirmationHandlesFinishedAndContinuingTables() {
         saveProfile(named: "Leaver")
 
-        button("lobby.join", timeout: 3).tap()
-        button("lobby.addTestPlayer").tap()
-        button("lobby.ready").tap()
+        button("lobby.addPlayer").tap()
+        button("lobby.startGame").tap()
 
+        revealCurrentHand(expectedPlayer: "Leaver")
         button("table.leave", timeout: 5).tap()
         button("table.leave.confirm").tap()
 
@@ -213,6 +225,26 @@ final class RiverInteractionTests: XCTestCase {
         assertLabel(anyElement("table.result"), contains: "game")
         XCTAssertFalse(app.buttons["table.leave"].waitForExistence(timeout: 1))
         XCTAssertFalse(app.buttons["table.action.dealNext"].exists)
+
+        button("table.action.newTable").tap()
+        XCTAssertTrue(button("lobby.startGame", timeout: 3).exists)
+        XCTAssertFalse(button("lobby.startGame").isEnabled)
+        assertLabel(anyElement("lobby.localSeat"), contains: "Leaver")
+
+        button("lobby.addPlayer").tap()
+        button("lobby.addPlayer").tap()
+        button("lobby.startGame").tap()
+
+        revealCurrentHand(expectedPlayer: "Leaver")
+        button("table.leave", timeout: 5).tap()
+        button("table.leave.confirm").tap()
+        revealCurrentHand()
+        button("table.action.fold", timeout: 3).tap()
+
+        let dealNext = button("table.action.dealNext", timeout: 3)
+        dealNext.tap()
+        revealCurrentHand()
+        XCTAssertTrue(anyElement("table.holeCards", timeout: 3).exists)
     }
 
     private func saveProfile(named name: String) {
@@ -224,7 +256,7 @@ final class RiverInteractionTests: XCTestCase {
         XCTAssertTrue(saveProfile.isEnabled)
         saveProfile.tap()
 
-        assertLabel(anyElement("lobby.profileSummary", timeout: 3), contains: name)
+        assertLabel(anyElement("lobby.localSeat", timeout: 3), contains: name)
     }
 
     private var defaultTimeout: TimeInterval { 2 }
@@ -233,29 +265,56 @@ final class RiverInteractionTests: XCTestCase {
                         timeout: TimeInterval? = nil,
                         file: StaticString = #filePath,
                         line: UInt = #line) -> XCUIElement {
-        let element = app.buttons[identifier]
-        XCTAssertTrue(element.waitForExistence(timeout: timeout ?? defaultTimeout),
-                      "Missing button \(identifier)", file: file, line: line)
-        return element
+        let element = app.buttons.matching(identifier: identifier).firstMatch
+        return require(element, timeout: timeout,
+                       message: "Missing button \(identifier)", file: file, line: line)
+    }
+
+    private func button(labeled label: String,
+                        timeout: TimeInterval? = nil,
+                        file: StaticString = #filePath,
+        line: UInt = #line) -> XCUIElement {
+        let element = app.buttons[label].firstMatch
+        return require(element, timeout: timeout,
+                       message: "Missing button labeled \(label)", file: file, line: line)
+    }
+
+    private func waitUntilHittable(_ element: XCUIElement,
+                                   file: StaticString = #filePath,
+                                   line: UInt = #line) {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isHittable == true"),
+            object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: defaultTimeout),
+                       .completed, "Element never became hittable", file: file, line: line)
     }
 
     private func textField(_ identifier: String,
                            timeout: TimeInterval? = nil,
                            file: StaticString = #filePath,
-                           line: UInt = #line) -> XCUIElement {
+        line: UInt = #line) -> XCUIElement {
         let element = app.textFields[identifier]
-        XCTAssertTrue(element.waitForExistence(timeout: timeout ?? defaultTimeout),
-                      "Missing text field \(identifier)", file: file, line: line)
-        return element
+        return require(element, timeout: timeout,
+                       message: "Missing text field \(identifier)", file: file, line: line)
     }
 
     private func anyElement(_ identifier: String,
                             timeout: TimeInterval? = nil,
                             file: StaticString = #filePath,
-                            line: UInt = #line) -> XCUIElement {
+        line: UInt = #line) -> XCUIElement {
         let element = app.descendants(matching: .any)[identifier]
-        XCTAssertTrue(element.waitForExistence(timeout: timeout ?? defaultTimeout),
-                      "Missing element \(identifier)", file: file, line: line)
+        return require(element, timeout: timeout,
+                       message: "Missing element \(identifier)", file: file, line: line)
+    }
+
+    private func require(_ element: XCUIElement,
+                         timeout: TimeInterval?,
+                         message: String,
+                         file: StaticString,
+                         line: UInt) -> XCUIElement {
+        XCTAssertTrue(element.exists || element.waitForExistence(timeout: timeout ?? defaultTimeout),
+                      message, file: file, line: line)
         return element
     }
 
@@ -277,6 +336,7 @@ final class RiverInteractionTests: XCTestCase {
     }
 
     private func tapCheckOrCall(file: StaticString = #filePath, line: UInt = #line) {
+        revealCurrentHandIfNeeded(file: file, line: line)
         let check = app.buttons["table.action.check"]
         if check.waitForExistence(timeout: defaultTimeout) {
             check.tap()
@@ -289,22 +349,67 @@ final class RiverInteractionTests: XCTestCase {
         call.tap()
     }
 
-    private func assertRaiseSelectionAfterAdjusting(_ slider: XCUIElement,
-                                                    to normalizedPosition: CGFloat,
-                                                    file: StaticString = #filePath,
-                                                    line: UInt = #line) {
+    private func revealCurrentHandIfNeeded(file: StaticString = #filePath,
+                                           line: UInt = #line) {
+        if app.descendants(matching: .any)["table.handoff"]
+            .waitForExistence(timeout: 0.5) {
+            revealCurrentHand(file: file, line: line)
+        } else {
+            XCTAssertTrue(app.descendants(matching: .any)["table.holeCards"].exists,
+                          "Expected a revealed hand for the continuing player",
+                          file: file,
+                          line: line)
+        }
+    }
+
+    private func revealCurrentHand(expectedPlayer: String? = nil,
+                                   file: StaticString = #filePath,
+                                   line: UInt = #line) {
+        let handoff = anyElement("table.handoff", timeout: 3, file: file, line: line)
+        if let expectedPlayer {
+            assertLabel(handoff, contains: expectedPlayer, file: file, line: line)
+        }
+        XCTAssertFalse(app.descendants(matching: .any)["table.holeCards"].exists,
+                       "Hole cards must remain absent until the current player reveals",
+                       file: file,
+                       line: line)
+        XCTAssertTrue(app.buttons["table.leave"].exists,
+                      "Players must be able to leave without revealing a hand",
+                      file: file,
+                      line: line)
+        let reveal = button("table.handoff.reveal", file: file, line: line)
+        waitUntilHittable(reveal, file: file, line: line)
+        reveal.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["table.holeCards"]
+                .waitForExistence(timeout: defaultTimeout),
+            "Hole cards did not appear after the handoff reveal",
+            file: file,
+            line: line
+        )
+    }
+
+    private func raiseAmountAfterAdjusting(_ slider: XCUIElement,
+                                           to normalizedPosition: CGFloat,
+                                           file: StaticString = #filePath,
+                                           line: UInt = #line) -> Int {
         slider.adjust(toNormalizedSliderPosition: normalizedPosition)
 
-        assertLabel(button("table.raise.submit", file: file, line: line),
-                    contains: "raise to",
-                    file: file,
-                    line: line)
+        let label = button("table.raise.submit", file: file, line: line).label
+        let amountText = label
+            .replacingOccurrences(of: "Raise to ", with: "")
+            .replacingOccurrences(of: ",", with: "")
+        guard let amount = Int(amountText) else {
+            XCTFail("Expected numeric raise label, got '\(label)'", file: file, line: line)
+            return -1
+        }
 
         let valueText = slider.value as? String ?? ""
         XCTAssertFalse(valueText.isEmpty,
                        "Expected raise slider to expose the selected raise amount",
                        file: file,
                        line: line)
+        return amount
     }
 
     private func waitForBoardCardCount(_ expectedCount: Int,
@@ -328,7 +433,7 @@ final class RiverInteractionTests: XCTestCase {
         guard label.hasPrefix("Board: ") else { return 0 }
         return label
             .dropFirst("Board: ".count)
-            .split(separator: " ")
+            .split(separator: ",")
             .count
     }
 

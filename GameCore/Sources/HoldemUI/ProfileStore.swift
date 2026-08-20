@@ -1,42 +1,51 @@
 import Foundation
 import GameCore
-import Observation
 
 /// The local player's chosen handle and emoji avatar. Persisted on-device
 /// because Messages hides real contact names and photos.
 @MainActor
-@Observable
-public final class ProfileStore {
-    public var name: String
-    public var avatar: String
-
+public struct ProfileStore {
     private let defaults: UserDefaults
-    private let nameKey = "holdem.profile.name"
-    private let avatarKey = "holdem.profile.avatar"
+    private static let profileKey = "holdem.profile"
+    private static let playerIDKey = "holdem.player.id.v1"
 
-    public init(defaults: UserDefaults = .standard, resetProfile: Bool = false) {
+    public init(resetProfile: Bool = false) {
+        self.init(defaults: UserDefaults(suiteName: "group.com.dewylabs.river") ?? .standard,
+                  resetProfile: resetProfile)
+    }
+
+    init(defaults: UserDefaults, resetProfile: Bool = false) {
         self.defaults = defaults
         if resetProfile {
-            defaults.removeObject(forKey: nameKey)
-            defaults.removeObject(forKey: avatarKey)
+            defaults.removeObject(forKey: Self.profileKey)
         }
-        self.name = Self.normalizedStoredName(defaults.string(forKey: nameKey))
-        self.avatar = ProfileText.avatar(defaults.string(forKey: avatarKey) ?? "")
     }
 
-    public var hasProfile: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    public var configuredProfile: PlayerProfile? {
+        guard let record = defaults.dictionary(forKey: Self.profileKey),
+              let name = record["name"] as? String,
+              let avatar = record["avatar"] as? String,
+              let profile = PlayerProfile(name: name, avatar: avatar) else {
+            defaults.removeObject(forKey: Self.profileKey)
+            return nil
+        }
+        return profile
     }
 
-    public func save(name: String, avatar: String) {
-        self.name = Self.normalizedStoredName(name)
-        self.avatar = ProfileText.avatar(avatar)
-        defaults.set(self.name, forKey: nameKey)
-        defaults.set(self.avatar, forKey: avatarKey)
+    public func save(_ profile: PlayerProfile) {
+        defaults.set(["name": profile.name, "avatar": profile.avatar],
+                     forKey: Self.profileKey)
     }
 
-    private static func normalizedStoredName(_ value: String?) -> String {
-        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return String(trimmed.prefix(ProfileText.maxNameLength))
+    /// Stable across launches so existing table seats remain addressable.
+    public func playerID(seed: String) -> String {
+        if let stored = defaults.string(forKey: Self.playerIDKey),
+           let id = UUID(uuidString: stored) {
+            return id.uuidString
+        }
+
+        let id = UUID(uuidString: seed)?.uuidString ?? UUID().uuidString
+        defaults.set(id, forKey: Self.playerIDKey)
+        return id
     }
 }

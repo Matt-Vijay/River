@@ -7,150 +7,103 @@ struct PayloadSerializationTests {
     @Test("state round-trips through the string form")
     func stringRoundTrip() throws {
         let state = sixPlayerState()
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
+        let encoded = try encodedGame(state)
+        let decoded = try decodedGame(from: encoded)
+        let encodedObject = try #require(
+            JSONSerialization.jsonObject(with: GamePayload.encoder.encode(state)) as? [String: Any]
+        )
+        let envelope = try #require(
+            JSONSerialization.jsonObject(
+                with: GamePayload.encoder.encode(TableMessage.game(state))
+            ) as? [String: Any]
+        )
+
         #expect(decoded == state)
+        #expect(encodedObject["currentBet"] == nil)
+        #expect(encodedObject["pot"] as? Int == 0)
+        #expect(envelope["wireVersion"] as? Int == 1)
+        #expect(envelope["game"] != nil)
+        #expect(envelope["lobby"] == nil)
     }
 
-    @Test("state round-trips through the URL form")
-    func urlRoundTrip() throws {
-        let state = sixPlayerState()
-        let url = try GamePayload.encodeToURL(state)
-        let decoded = try GamePayload.decode(from: url)
-        #expect(decoded == state)
+    @Test("decoded results reject malformed best five")
+    func decodedResultsRejectMalformedBestFive() throws {
+        var result = HandResult(playerID: "p0", amountWon: 10,
+                                handName: "Pair", bestFive: cards("Ah Kh Qh Jh Th"))
+        result.bestFive = cards("Ah Kh")
+
+        let data = try JSONEncoder().encode(result)
+        #expect(throws: DecodingError.self) {
+            _ = try JSONDecoder().decode(HandResult.self, from: data)
+        }
     }
 
-    @Test("six-player payload fits comfortably in a message URL")
+    @Test("largest production-shaped tables fit the transport budget")
     func payloadSize() throws {
-        let url = try GamePayload.encodeToURL(sixPlayerState())
-        let length = url.absoluteString.count
-        // Plenty of headroom; iMessage URLs handle a few KB without trouble.
-        #expect(length < 4000)
+        var live = sixPlayerState()
+        for index in live.players.indices {
+            live.players[index].id = String(format: "10000000-0000-0000-0000-%012d", index)
+            live.players[index].name = String(repeating: "🂡", count: ProfileText.maxNameLength)
+            live.players[index].avatar = String(repeating: "🧑🏿", count: ProfileText.maxAvatarLength)
+        }
+        let inflatedLive = try GamePayload.encode(.game(live)).utf8.count
+
+        var completed = completedSixPlayerState()
+        for index in completed.players.indices {
+            completed.players[index].id = String(format: "10000000-0000-0000-0000-%012d", index)
+            completed.players[index].name = String(repeating: "🂡", count: ProfileText.maxNameLength)
+            completed.players[index].avatar = String(repeating: "🧑🏿", count: ProfileText.maxAvatarLength)
+        }
+        let inflatedCompleted = try GamePayload.encode(.game(completed)).utf8.count
+
+        let lobby = Lobby(
+            tableID: "20000000-0000-0000-0000-000000000000",
+            seats: (0..<6).map {
+                LobbySeat(
+                    id: String(format: "10000000-0000-0000-0000-%012d", $0),
+                    name: String(repeating: "🂡", count: ProfileText.maxNameLength),
+                    avatar: String(repeating: "🧑🏿", count: ProfileText.maxAvatarLength)
+                )
+            }
+        )
+        let inflatedLobby = try GamePayload.encode(.lobby(lobby)).utf8.count
+        let productionPayloadBudget = GamePayload.maximumEncodedPayloadLength
+
+        #expect(inflatedLobby < productionPayloadBudget)
+        #expect(inflatedLive < productionPayloadBudget)
+        #expect(inflatedCompleted < productionPayloadBudget)
     }
 
-    @Test("payload is URL-safe (no characters needing escaping)")
+    @Test("oversized wire payloads fail before decoding")
+    func oversizedPayloadsAreRejected() throws {
+        let oversizedWire = String(
+            repeating: "A",
+            count: GamePayload.maximumEncodedPayloadLength + 1
+        )
+        #expect(throws: DecodingError.self) {
+            _ = try GamePayload.decodeMessage(from: oversizedWire)
+        }
+    }
+
+    @Test("compressed payloads cannot expand beyond the decode budget")
+    func compressedExpansionIsBounded() throws {
+        let expanded = Data(repeating: 65, count: GamePayload.maximumDecodedPayloadLength + 1)
+        let compressed = try (expanded as NSData).compressed(using: .lzfse) as Data
+        let wire = "z" + compressed.base64URLEncodedString()
+
+        #expect(wire.utf8.count < GamePayload.maximumEncodedPayloadLength)
+        #expect(throws: DecodingError.self) {
+            _ = try GamePayload.decodeMessage(from: wire)
+        }
+    }
+
+    @Test("compressed payload is URL-safe")
     func urlSafe() throws {
-        let encoded = try GamePayload.encodeToString(sixPlayerState())
+        let encoded = try encodedGame(sixPlayerState())
+        #expect(encoded.first == "z")
         #expect(!encoded.contains("+"))
         #expect(!encoded.contains("/"))
         #expect(!encoded.contains("="))
-    }
-
-    @Test("URL decoding rejects URLs without a payload query item")
-    func urlRequiresPayloadQueryItem() throws {
-        let url = try #require(URL(string: "holdem://game?x=missing"))
-
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decode(from: url)
-        }
-    }
-
-    @Test("URL decoding rejects ambiguous duplicate payload query items")
-    func urlRejectsDuplicatePayloadQueryItems() throws {
-        let first = try GamePayload.encodeToString(sixPlayerState())
-        let second = try GamePayload.encodeToString(TableMessage.lobby(Lobby(tableID: "table-123")))
-        let url = try #require(URL(string: "holdem://game?g=\(first)&g=\(second)"))
-
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decode(from: url)
-        }
-    }
-
-    @Test("state URL decoding rejects non-game routes")
-    func stateURLDecodingRejectsNonGameRoutes() throws {
-        let encoded = try GamePayload.encodeToString(sixPlayerState())
-        let url = try #require(URL(string: "holdem://table?g=\(encoded)"))
-
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decode(from: url)
-        }
-    }
-
-    @Test("state URL decoding rejects non-holdem schemes")
-    func stateURLDecodingRejectsNonHoldemSchemes() throws {
-        let encoded = try GamePayload.encodeToString(sixPlayerState())
-        let url = try #require(URL(string: "https://game?g=\(encoded)"))
-
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decode(from: url)
-        }
-    }
-
-    @Test("table message URL decoding rejects non-table routes")
-    func tableMessageURLDecodingRejectsNonTableRoutes() throws {
-        let message = TableMessage.lobby(Lobby(tableID: "table-123"))
-        let encoded = try GamePayload.encodeToString(message)
-        let url = try #require(URL(string: "holdem://operation?g=\(encoded)"))
-
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decodeMessage(from: url)
-        }
-    }
-
-    @Test("table message URL decoding rejects non-holdem schemes")
-    func tableMessageURLDecodingRejectsNonHoldemSchemes() throws {
-        let message = TableMessage.lobby(Lobby(tableID: "table-123"))
-        let encoded = try GamePayload.encodeToString(message)
-        let url = try #require(URL(string: "https://table?g=\(encoded)"))
-
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decodeMessage(from: url)
-        }
-    }
-
-    @Test("operation envelopes round-trip through string and URL payloads")
-    func operationEnvelopeRoundTripsThroughPayloads() throws {
-        let revision = TableRevision(tableID: "table-123", phase: .game, version: 7)
-        let operation = TableOperation(id: "  op-1  ",
-                                       actorID: "  player-a  ",
-                                       baseRevision: revision,
-                                       kind: .gameAction(.raise(to: -20)))
-
-        let encoded = try GamePayload.encodeOperationToString(operation)
-        let decoded = try GamePayload.decodeOperation(fromString: encoded)
-        let url = try GamePayload.encodeOperationToURL(operation)
-        let decodedURL = try GamePayload.decodeOperation(from: url)
-
-        #expect(!encoded.contains("+"))
-        #expect(!encoded.contains("/"))
-        #expect(!encoded.contains("="))
-        #expect(url.host == "operation")
-        #expect(decoded == operation)
-        #expect(decodedURL == operation)
-        #expect(decoded.id == "op-1")
-        #expect(decoded.actorID == "player-a")
-        #expect(decoded.kind == .gameAction(.raise(to: 0)))
-        #expect(decoded.baseRevision == revision)
-    }
-
-    @Test("operation URL decoding rejects non-operation routes")
-    func operationURLDecodingRejectsNonOperationRoutes() throws {
-        let revision = TableRevision(tableID: "table-123", phase: .game, version: 7)
-        let operation = TableOperation(id: "op-1",
-                                       actorID: "player-a",
-                                       baseRevision: revision,
-                                       kind: .gameAction(.fold))
-        let encoded = try GamePayload.encodeOperationToString(operation)
-        let url = try #require(URL(string: "holdem://table?g=\(encoded)"))
-
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decodeOperation(from: url)
-        }
-    }
-
-    @Test("operation URL decoding rejects non-holdem schemes")
-    func operationURLDecodingRejectsNonHoldemSchemes() throws {
-        let revision = TableRevision(tableID: "table-123", phase: .game, version: 7)
-        let operation = TableOperation(id: "op-1",
-                                       actorID: "player-a",
-                                       baseRevision: revision,
-                                       kind: .gameAction(.fold))
-        let encoded = try GamePayload.encodeOperationToString(operation)
-        let url = try #require(URL(string: "https://operation?g=\(encoded)"))
-
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decodeOperation(from: url)
-        }
     }
 
     @Test("decoded game states normalize non-negative table numbers")
@@ -158,20 +111,17 @@ struct PayloadSerializationTests {
         var state = sixPlayerState()
         state.smallBlind = -5
         state.bigBlind = -10
-        state.pot = -20
-        state.currentBet = -30
         state.minRaise = -40
         state.turnDuration = -60
         state.handNumber = -2
         state.version = -7
 
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
+        let encoded = try encodedGame(state)
+        let decoded = try decodedGame(from: encoded)
 
         #expect(decoded.handNumber == 1)
         #expect(decoded.smallBlind == 1)
         #expect(decoded.bigBlind == 2)
-        #expect(decoded.pot == 0)
         #expect(decoded.currentBet == 20)
         #expect(decoded.minRaise == 2)
         #expect(decoded.turnDuration == TurnClock.defaultDuration)
@@ -184,9 +134,10 @@ struct PayloadSerializationTests {
         state.players[0].stack = -100
         state.players[0].bet = -10
         state.players[0].committed = -20
+        state.players[0].status = .allIn
 
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
+        let encoded = try encodedGame(state)
+        let decoded = try decodedGame(from: encoded)
 
         #expect(decoded.players[0].stack == 0)
         #expect(decoded.players[0].bet == 0)
@@ -196,250 +147,140 @@ struct PayloadSerializationTests {
     @Test("decoded players normalize profile text")
     func decodedPlayersNormalizeProfileText() throws {
         var state = sixPlayerState()
-        state.players[0].name = "   "
-        state.players[0].avatar = "   "
         state.players[1].name = "  \(String(repeating: "B", count: ProfileText.maxNameLength + 4))  "
         state.players[1].avatar = "  \(String(repeating: "B", count: ProfileText.maxAvatarLength + 4))  "
 
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
+        let encoded = try encodedGame(state)
+        let decoded = try decodedGame(from: encoded)
 
-        #expect(decoded.players[0].name == "Player")
-        #expect(decoded.players[0].avatar == "🙂")
         #expect(decoded.players[1].name == String(repeating: "B", count: ProfileText.maxNameLength))
         #expect(decoded.players[1].avatar == String(repeating: "B", count: ProfileText.maxAvatarLength))
     }
 
-    @Test("decoded players replace empty identities")
-    func decodedPlayersReplaceEmptyIdentities() throws {
-        var state = sixPlayerState()
-        state.players[0].id = ""
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(!decoded.players[0].id.isEmpty)
-    }
-
-    @Test("decoded players replace duplicate identities")
-    func decodedPlayersReplaceDuplicateIdentities() throws {
-        var state = sixPlayerState()
-        state.players[1].id = state.players[0].id
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(Set(decoded.players.map(\.id)).count == decoded.players.count)
-        #expect(decoded.players[0].id == state.players[0].id)
-    }
-
-    @Test("decoded lobby seats normalize identity and profile text")
-    func decodedLobbySeatsNormalizeIdentityAndProfileText() throws {
+    @Test("decoded lobby seats normalize profile text")
+    func decodedLobbySeatsNormalizeProfileText() throws {
         var lobby = Lobby(seats: [
             LobbySeat(id: "a", name: "Alice", avatar: "A"),
         ])
-        lobby.seats[0].id = ""
         lobby.seats[0].name = String(repeating: "L", count: ProfileText.maxNameLength + 4)
-        lobby.seats[0].avatar = "   "
+        lobby.seats[0].avatar = String(repeating: "A", count: ProfileText.maxAvatarLength + 4)
 
-        let encoded = try GamePayload.encodeToString(TableMessage.lobby(lobby))
-        guard case .lobby(let decoded) = try GamePayload.decodeMessage(fromString: encoded) else {
+        let encoded = try GamePayload.encode(TableMessage.lobby(lobby))
+        guard case .lobby(let decoded) = try GamePayload.decodeMessage(from: encoded) else {
             Issue.record("expected lobby"); return
         }
 
-        #expect(!decoded.seats[0].id.isEmpty)
+        #expect(decoded.seats[0].id == "a")
         #expect(decoded.seats[0].name == String(repeating: "L", count: ProfileText.maxNameLength))
-        #expect(decoded.seats[0].avatar == "🙂")
+        #expect(decoded.seats[0].avatar == String(repeating: "A", count: ProfileText.maxAvatarLength))
     }
 
-    @Test("decoded game states normalize stored seat indexes")
-    func decodedGameStateNormalizesStoredSeatIndexes() throws {
-        var state = sixPlayerState()
-        state.dealerIndex = -5
-        state.currentToAct = 99
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.dealerIndex == 1)
-        #expect(decoded.currentToAct == nil)
-    }
-
-    @Test("decoded live game states fold departed active players")
-    func decodedLiveGameStatesFoldDepartedActivePlayers() throws {
+    @Test("decoded live games reject departed active players")
+    func decodedLiveGamesRejectDepartedActivePlayers() throws {
         var state = sixPlayerState()
         state.results = nil
         state.players[0].hasLeft = true
         state.players[0].status = .active
-        state.currentToAct = 0
+        state.currentToAct = 1
 
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.players[0].status == .folded)
-        #expect(!decoded.players[0].isContesting)
-        #expect(decoded.currentToAct == nil)
+        let encoded = try encodedGame(state)
+        #expect(throws: DecodingError.self) {
+            _ = try decodedGame(from: encoded)
+        }
     }
 
-    @Test("decoded completed game states clear actor clocks")
-    func decodedCompletedGameStatesClearActorClocks() throws {
-        var state = sixPlayerState()
-        state.street = .showdown
+    @Test("decoded completed games reject live betting state")
+    func decodedCompletedGamesRejectLiveBettingState() throws {
+        var state = completedSixPlayerState()
+        state.dealerIndex = -5
+        state.street = .turn
         state.currentToAct = 0
         state.turnStartedAt = Date()
-        state.results = [
-            HandResult(playerID: state.players[0].id, amountWon: 20,
-                       handName: nil, bestFive: nil),
-        ]
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.currentToAct == nil)
-        #expect(decoded.turnStartedAt == nil)
-    }
-
-    @Test("decoded completed game states normalize to showdown")
-    func decodedCompletedGameStatesNormalizeToShowdown() throws {
-        var state = sixPlayerState()
-        state.street = .turn
-        state.results = [
-            HandResult(playerID: state.players[0].id, amountWon: 20,
-                       handName: "Pair", bestFive: nil),
-        ]
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.street == .showdown)
-    }
-
-    @Test("decoded completed game states clear live betting state")
-    func decodedCompletedGameStatesClearLiveBettingState() throws {
-        var state = sixPlayerState()
         state.players[0].bet = 10
-        state.players[0].hasActed = true
-        state.pot = 50
-        state.currentBet = 20
-        state.results = [
-            HandResult(playerID: state.players[0].id, amountWon: 80,
-                       handName: nil, bestFive: nil),
-        ]
+        state.players[0].lastActionBet = 10
 
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.pot == 0)
-        #expect(decoded.currentBet == 0)
-        #expect(decoded.players.allSatisfy { $0.bet == 0 })
-        #expect(decoded.players.allSatisfy { !$0.hasActed })
-    }
-
-    @Test("decoded game states normalize holdem card shape")
-    func decodedGameStatesNormalizeHoldemCardShape() throws {
-        var state = sixPlayerState()
-        for index in state.players.indices {
-            state.players[index].holeCards = []
+        let encoded = try encodedGame(state)
+        #expect(throws: DecodingError.self) {
+            _ = try decodedGame(from: encoded)
         }
-        state.players[0].holeCards = cards("Ah Kh Qh")
-        state.board = cards("2h 3h 4h 5h 6h 7h")
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.players[0].holeCards == cards("Ah Kh"))
-        #expect(decoded.board == cards("2h 3h 4h 5h 6h"))
     }
 
-    @Test("decoded hand results normalize non-negative winnings")
-    func decodedHandResultsNormalizeNonNegativeWinnings() throws {
-        var state = sixPlayerState()
-        state.results = [
-            HandResult(playerID: state.players[0].id, amountWon: -50,
-                       handName: nil, bestFive: nil),
-        ]
+    @Test("decoded live games reject a wire pot that disagrees with committed chips")
+    func decodedLiveGameRejectsMismatchedPot() throws {
+        let state = sixPlayerState()
+        var object = try #require(
+            JSONSerialization.jsonObject(with: GamePayload.encoder.encode(state)) as? [String: Any]
+        )
+        object["pot"] = 1
+        let data = try JSONSerialization.data(withJSONObject: object)
 
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.results?.first?.amountWon == 0)
+        #expect(throws: DecodingError.self) {
+            _ = try GamePayload.decoder.decode(GameState.self, from: data)
+        }
     }
 
-    @Test("decoded hand results are limited to current players")
-    func decodedHandResultsAreLimitedToCurrentPlayers() throws {
-        var state = sixPlayerState()
-        state.results = [
-            HandResult(playerID: "", amountWon: 30, handName: nil, bestFive: nil),
-            HandResult(playerID: "missing", amountWon: 20, handName: nil, bestFive: nil),
-            HandResult(playerID: state.players[1].id, amountWon: 10, handName: nil, bestFive: nil),
-        ]
+    @Test("decoded wire payloads reject blank profiles and invalid identities")
+    func decodedWirePayloadsRejectBlankProfilesAndInvalidIdentities() throws {
+        func game(_ mutate: (inout GameState) -> Void) throws -> String {
+            var state = sixPlayerState()
+            mutate(&state)
+            return try encodedGame(state)
+        }
 
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
+        func lobby(seats: [LobbySeat] = [],
+                   _ mutate: (inout Lobby) -> Void) throws -> String {
+            var lobby = Lobby(tableID: "valid", seats: seats)
+            mutate(&lobby)
+            return try GamePayload.encode(.lobby(lobby))
+        }
 
-        #expect(decoded.results?.map(\.playerID) == [state.players[1].id])
+        var rejectedPayloads: [String] = []
+        for tableID in ["", " \n "] {
+            rejectedPayloads.append(try game { $0.tableID = tableID })
+            rejectedPayloads.append(try lobby { $0.tableID = tableID })
+        }
+
+        rejectedPayloads.append(try game { $0.players[0].id = " " })
+        rejectedPayloads.append(try game {
+            $0.players[1].id = $0.players[0].id
+        })
+
+        for field in [\Player.name, \Player.avatar] {
+            rejectedPayloads.append(try game {
+                $0.players[0][keyPath: field] = " \n "
+            })
+        }
+
+        let seat = LobbySeat(id: "a", name: "Alice", avatar: "A")
+        rejectedPayloads.append(try lobby(seats: [seat]) { $0.seats[0].id = "\n" })
+        rejectedPayloads.append(try lobby(seats: [
+            seat, LobbySeat(id: "b", name: "Bob", avatar: "B")
+        ]) {
+            $0.seats[1].id = $0.seats[0].id
+        })
+        rejectedPayloads.append(try lobby { $0.maxPlayers = 99 })
+        rejectedPayloads.append(try lobby {
+            $0.seats = (0...TableRules.maxPlayers).map {
+                LobbySeat(id: "p\($0)", name: "P\($0)", avatar: "P")
+            }
+        })
+
+        for field in [\LobbySeat.name, \LobbySeat.avatar] {
+            rejectedPayloads.append(try lobby(seats: [seat]) {
+                $0.seats[0][keyPath: field] = " \n "
+            })
+        }
+
+        for payload in rejectedPayloads {
+            #expect(throws: DecodingError.self) {
+                _ = try GamePayload.decodeMessage(from: payload)
+            }
+        }
     }
+}
 
-    @Test("decoded hand results merge duplicate players")
-    func decodedHandResultsMergeDuplicatePlayers() throws {
-        var state = sixPlayerState()
-        state.results = [
-            HandResult(playerID: state.players[1].id, amountWon: 10, handName: "Pair", bestFive: nil),
-            HandResult(playerID: state.players[0].id, amountWon: 5, handName: nil, bestFive: nil),
-            HandResult(playerID: state.players[1].id, amountWon: 20, handName: "Flush", bestFive: nil),
-        ]
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.results?.map(\.playerID) == [state.players[1].id, state.players[0].id])
-        #expect(decoded.results?.map(\.amountWon) == [30, 5])
-        #expect(decoded.results?.first?.handName == "Pair")
-    }
-
-    @Test("decoded hand results clear impossible best-five highlights")
-    func decodedHandResultsClearImpossibleBestFiveHighlights() throws {
-        var state = sixPlayerState()
-        state.board = cards("2h 3h 4h 5h 6h")
-        state.players[0].holeCards = cards("Ah Kh")
-        state.players[1].holeCards = cards("Ac Kc")
-        state.results = [
-            HandResult(playerID: state.players[0].id,
-                       amountWon: 20,
-                       handName: "Flush",
-                       bestFive: cards("Ah Kh 2h 3h 4h")),
-            HandResult(playerID: state.players[1].id,
-                       amountWon: 0,
-                       handName: "Flush",
-                       bestFive: cards("Ac Kc Qc Jc Tc")),
-        ]
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.results?.first?.bestFive == cards("Ah Kh 2h 3h 4h"))
-        #expect(decoded.results?.dropFirst().first?.bestFive == nil)
-    }
-
-    @Test("decoded operation history is ordered and unique")
-    func decodedOperationHistoryIsOrderedAndUnique() throws {
-        var state = sixPlayerState()
-        state.appliedOperationIDs = ["op-1", "", "op-2", "op-1", "op-3", "", "op-2"]
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(decoded.appliedOperationIDs == ["op-1", "op-2", "op-3"])
-    }
-
-    @Test("decoded game states replace empty table identities")
-    func decodedGameStatesReplaceEmptyTableIdentities() throws {
-        var state = sixPlayerState()
-        state.tableID = ""
-
-        let encoded = try GamePayload.encodeToString(state)
-        let decoded = try GamePayload.decode(fromString: encoded)
-
-        #expect(!decoded.tableID.isEmpty)
-    }
+private func completedSixPlayerState() -> GameState {
+    var state = sixPlayerState()
+    checkOrCallToShowdown(&state)
+    return state
 }

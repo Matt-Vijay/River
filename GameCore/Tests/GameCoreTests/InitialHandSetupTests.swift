@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import GameCore
 
@@ -15,6 +16,18 @@ struct InitialHandSetupTests {
         #expect(s.players.allSatisfy { $0.holeCards.count == 2 })
         #expect(s.deck.count == 48)
         #expect(s.displayPot == 30)
+    }
+
+    @Test("an all-in heads-up small blind cannot become a stuck actor")
+    func allInSmallBlindRunsOut() {
+        let s = GameState.startHand(players: makePlayers([5, 100]),
+                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
+                                    seed: 1, handNumber: 1)
+
+        #expect(s.isHandComplete)
+        #expect(s.currentToAct == nil)
+        #expect(s.board.count == 5)
+        #expect(totalChips(s) == 105)
     }
 
     @Test("three-handed: blinds left of dealer, UTG acts first")
@@ -45,6 +58,33 @@ struct InitialHandSetupTests {
         #expect(negative.players[0].bet == 10)
         #expect(negative.players[1].bet == 20)
         #expect(negative.currentToAct == 2)
+
+        var departedDealerPlayers = makePlayers([100, 100, 100])
+        departedDealerPlayers[1].hasLeft = true
+        let departedDealer = GameState.startHand(
+            players: departedDealerPlayers,
+            dealerIndex: 1,
+            smallBlind: 10,
+            bigBlind: 20,
+            seed: 2,
+            handNumber: 1
+        )
+        #expect(departedDealer.dealerIndex == 2)
+        #expect(departedDealer.players[1].bet == 0)
+        #expect(departedDealer.players[2].bet == 10)
+        #expect(departedDealer.players[0].bet == 20)
+
+        let oversized = GameState.startHand(
+            players: makePlayers(Array(repeating: 100, count: 7)),
+            dealerIndex: 0,
+            smallBlind: 10,
+            bigBlind: 20,
+            seed: 2,
+            handNumber: 1
+        )
+        #expect(oversized.players.count == TableRules.maxPlayers)
+        #expect(oversized.players.allSatisfy { $0.holeCards.count == 2 })
+        #expect(oversized.deck.count == 52 - TableRules.maxPlayers * 2)
     }
 
     @Test("invalid blinds are normalized before betting state is created")
@@ -102,15 +142,34 @@ struct InitialHandSetupTests {
         #expect(s.deck.count == 48)
     }
 
-    @Test("hole-card dealing tolerates malformed short decks")
-    func holeCardDealingToleratesMalformedShortDecks() {
-        var players = makePlayers([1000, 1000])
-        var deck = cards("Ah")
+}
 
-        GameState.dealHoleCards(to: &players, deck: &deck, dealOrder: [0, 1])
+@Suite("Player")
+struct PlayerTests {
+    @Test("construction normalizes identity, profile, and chips")
+    func constructionNormalizesInput() {
+        let avatar = String(repeating: "A", count: ProfileText.maxAvatarLength + 4)
+        let player = Player(id: "  a  ", name: "  Alice  ",
+                            avatar: "  \(avatar)  ", stack: -100)
+        let fallback = Player(id: "   ", name: "   ", avatar: "   ", stack: 100)
 
-        #expect(players[0].holeCards == cards("Ah"))
-        #expect(players[1].holeCards.isEmpty)
-        #expect(deck.isEmpty)
+        #expect(player.id == "a")
+        #expect(player.name == "Alice")
+        #expect(player.avatar.count == ProfileText.maxAvatarLength)
+        #expect(player.stack == 0)
+        #expect(!fallback.id.isEmpty)
+        #expect(fallback.name == "Player")
+        #expect(fallback.avatar == "🙂")
+    }
+
+    @Test("decoding rejects more than two hole cards")
+    func decodingRejectsOversizedHoleCards() throws {
+        var player = Player(id: "a", name: "Alice", avatar: "A", stack: 100)
+        player.holeCards = cards("Ah Kh Qh")
+
+        let data = try JSONEncoder().encode(player)
+        #expect(throws: DecodingError.self) {
+            _ = try JSONDecoder().decode(Player.self, from: data)
+        }
     }
 }

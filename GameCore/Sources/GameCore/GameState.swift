@@ -1,152 +1,183 @@
 import Foundation
 
-/// The complete, serializable state of a poker hand. This is the single object
-/// that travels in the iMessage payload; every client renders from it.
-public struct GameState: Sendable, Equatable {
-    public var tableID: String
-    public var appliedOperationIDs: [String]
-    public var handNumber: Int
-    public var players: [Player]
-    public var dealerIndex: Int
-    public var smallBlind: Int
-    public var bigBlind: Int
-    public var board: [Card]
-    /// Undealt cards, in order. Stored in the payload so any client can deal the
-    /// next street deterministically. (Honest-client model: technically visible
-    /// to anyone inspecting the payload — acceptable for casual play.)
-    public var deck: [Card]
-    /// Chips collected from completed betting rounds.
-    public var pot: Int
-    public var street: Street
-    /// Index into `players` of who must act, or nil between hands / at showdown.
-    public var currentToAct: Int?
-    /// The bet amount to match in the current round.
-    public var currentBet: Int
-    /// Minimum legal raise increment for the current round.
-    public var minRaise: Int
-    /// When the current player's turn began (for lazy timeout resolution).
-    public var turnStartedAt: Date?
-    public var turnDuration: TimeInterval
-    public var results: [HandResult]?
-    /// Monotonic version; lets clients ignore stale/older state.
-    public var version: Int
+public enum Street: Int, Codable, Sendable {
+    case preflop, flop, turn, river, showdown
 
-    public init(tableID: String = UUID().uuidString, appliedOperationIDs: [String] = [],
-                handNumber: Int, players: [Player],
-                dealerIndex: Int, smallBlind: Int, bigBlind: Int, board: [Card],
-                deck: [Card], pot: Int, street: Street, currentToAct: Int?,
-                currentBet: Int, minRaise: Int, turnStartedAt: Date?,
-                turnDuration: TimeInterval, results: [HandResult]?, version: Int) {
-        let isHandComplete = results != nil
-        let players = Self.normalizedVisibleCards(
-            in: Self.normalizedPlayers(players, isHandComplete: isHandComplete)
-        )
-        let board = Self.normalizedBoard(board, players: players)
-        let currentToAct = Self.normalizedCurrentActor(currentToAct, players: players, isHandComplete: isHandComplete)
-        self.tableID = TableIdentity.normalized(tableID)
-        self.appliedOperationIDs = OperationIdentity.history(appliedOperationIDs)
-        self.handNumber = max(1, handNumber)
-        self.players = players
-        self.dealerIndex = Self.normalizedSeat(dealerIndex, playerCount: players.count)
-        let blinds = BlindStructure.normalized(smallBlind: smallBlind, bigBlind: bigBlind)
-        self.smallBlind = blinds.smallBlind
-        self.bigBlind = blinds.bigBlind
-        self.board = board
-        self.deck = Self.normalizedDeck(deck, players: players, board: board)
-        self.pot = Self.normalizedPot(pot, isHandComplete: isHandComplete)
-        self.street = Self.normalizedStreet(street, isHandComplete: isHandComplete)
-        self.currentToAct = currentToAct
-        self.currentBet = Self.normalizedCurrentBet(currentBet, players: players, isHandComplete: isHandComplete)
-        self.minRaise = isHandComplete ? 0 : max(blinds.bigBlind, minRaise)
-        self.turnStartedAt = currentToAct == nil ? nil : turnStartedAt
-        self.turnDuration = TurnClock.normalized(turnDuration)
-        self.results = Self.normalizedResults(results, players: players, board: board)
-        self.version = max(0, version)
+    var boardCount: Int {
+        switch self {
+        case .preflop: 0
+        case .flop: 3
+        case .turn: 4
+        case .river, .showdown: 5
+        }
     }
 }
 
+/// The outcome for one player at the end of a hand.
+public struct HandResult: Codable, Sendable, Equatable {
+    private enum CodingKeys: String, CodingKey {
+        case playerID, amountWon, handName, bestFive
+    }
+
+    public internal(set) var playerID: String
+    var amountWon: Int
+    public internal(set) var handName: String?
+    public internal(set) var bestFive: [Card]?
+
+    init(playerID: String, amountWon: Int, handName: String?, bestFive: [Card]?) {
+        self.playerID = playerID
+        self.amountWon = amountWon
+        self.handName = handName
+        self.bestFive = bestFive
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let bestFive = try container.decodeIfPresent([Card].self, forKey: .bestFive)
+        if let bestFive, bestFive.count != 5 || Set(bestFive).count != 5 {
+            throw DecodingError.dataCorruptedError(
+                forKey: .bestFive,
+                in: container,
+                debugDescription: "Best-five cards must contain five unique cards"
+            )
+        }
+        self.init(
+            playerID: try Identity.decoded(
+                container.decode(String.self, forKey: .playerID),
+                error: "Participant identity cannot be blank",
+                codingPath: container.codingPath + [CodingKeys.playerID]
+            ),
+            amountWon: TableRules.table(try container.decode(Int.self, forKey: .amountWon)),
+            handName: try container.decodeIfPresent(String.self, forKey: .handName),
+            bestFive: bestFive
+        )
+    }
+}
+
+/// The complete, serializable state of a poker hand. This is the single object
+/// that travels in the iMessage payload; every client renders from it.
+public struct GameState: Codable, Sendable, Equatable {
+    enum CodingKeys: String, CodingKey {
+        case tableID, handNumber, players, dealerIndex
+        case smallBlind, bigBlind, board, deck, pot, street, currentToAct, minRaise
+        case turnStartedAt, turnDuration, results, version
+    }
+
+    public internal(set) var tableID: String
+    public internal(set) var handNumber: Int
+    public internal(set) var players: [Player]
+    var dealerIndex: Int
+    var smallBlind: Int
+    public internal(set) var bigBlind: Int
+    public internal(set) var board: [Card]
+    /// Undealt cards, in order. Stored in the payload so any client can deal the
+    /// next street deterministically. (Honest-client model: technically visible
+    /// to anyone inspecting the payload — acceptable for casual play.)
+    var deck: [Card]
+    var street: Street
+    /// Index into `players` of who must act, or nil between hands / at showdown.
+    var currentToAct: Int?
+    /// Minimum legal raise increment for the current round.
+    var minRaise: Int
+    /// When the current player's turn began (for lazy timeout resolution).
+    public internal(set) var turnStartedAt: Date?
+    public internal(set) var turnDuration: TimeInterval
+    public internal(set) var results: [HandResult]?
+    /// Monotonic version; lets clients ignore stale/older state.
+    public internal(set) var version: Int
+}
+
 extension GameState {
-    static func normalizedPlayers(_ players: [Player], isHandComplete: Bool) -> [Player] {
-        ParticipantIdentity.uniquePlayers(players).map { player in
-            var copy = player
-            copy.holeCards = Array(copy.holeCards.prefix(2))
-            if isHandComplete {
-                copy.bet = 0
-                copy.hasActed = false
+    public func playerIndex(id: String) -> Int? {
+        players.firstIndex { $0.id == id }
+    }
+
+    func player(id: String) -> Player? {
+        playerIndex(id: id).map { players[$0] }
+    }
+
+    public func isCurrentPlayer(at index: Int) -> Bool {
+        currentToAct == index && players.indices.contains(index)
+    }
+
+    public var currentPlayer: Player? {
+        guard let currentToAct, players.indices.contains(currentToAct) else { return nil }
+        return players[currentToAct]
+    }
+
+    public func currentHandName(for index: Int) -> String? {
+        guard players.indices.contains(index) else { return nil }
+        return HandEvaluator.evaluateIfPossible(players[index].holeCards + board)?.name
+    }
+
+    var dealerSeatIndex: Int? {
+        players.isEmpty ? nil : Self.normalizedSeat(dealerIndex, playerCount: players.count)
+    }
+
+    public func isDealer(at index: Int) -> Bool {
+        dealerSeatIndex == index
+    }
+
+    static func normalizedSeat(_ index: Int, playerCount: Int) -> Int {
+        guard playerCount > 0 else { return 0 }
+        return ((index % playerCount) + playerCount) % playerCount
+    }
+
+    /// The amount every active player must match in this betting round.
+    var currentBet: Int {
+        contenders.map(\.bet).max() ?? 0
+    }
+
+    /// Total chips in play, including live bets or completed-hand awards.
+    public var displayPot: Int {
+        if let results {
+            return results.reduce(0) {
+                TableRules.adding($0, $1.amountWon, limit: TableRules.tableMaximum)
             }
-            if copy.hasLeft && copy.isContesting && !isHandComplete {
-                copy.status = .folded
-                copy.hasActed = true
-                copy.lastAction = .fold
-            }
-            return copy
+        }
+        return players.reduce(0) {
+            TableRules.adding($0, $1.committed, limit: TableRules.tableMaximum)
         }
     }
 
-    static func normalizedVisibleCards(in players: [Player]) -> [Player] {
-        var seen = Set<Card>()
-        return players.map { player in
-            var copy = player
-            copy.holeCards = copy.holeCards.filter { seen.insert($0).inserted }
-            return copy
+    /// Players still contesting the pot.
+    var contenders: [Player] {
+        players.filter(\.isContesting)
+    }
+
+    /// Players who remain seated and funded for another hand.
+    public var playersEligibleForNextHand: [Player] {
+        players.filter(\.isEligibleForNextHand)
+    }
+
+    /// Whether the current hand has produced a terminal result.
+    public var isHandComplete: Bool { results != nil }
+
+    /// The single remaining player, if the game is over.
+    public var overallWinner: Player? {
+        guard isHandComplete else { return nil }
+        let eligible = playersEligibleForNextHand
+        return eligible.count == 1 ? eligible.first : nil
+    }
+
+    /// Whether the table has a single remaining funded player and no more hands can be dealt.
+    public var isGameOver: Bool {
+        overallWinner != nil
+    }
+
+    /// Whether this participant is allowed to advance a completed table to the next hand.
+    public func canDealNextHand(actorID: String) -> Bool {
+        guard isHandComplete, !isGameOver, let player = player(id: actorID) else { return false }
+        return player.isEligibleForNextHand
+    }
+
+    func nextSeat(after index: Int, where predicate: (Player) -> Bool) -> Int? {
+        guard !players.isEmpty else { return nil }
+        let start = Self.normalizedSeat(index, playerCount: players.count)
+        for offset in 1...players.count {
+            let candidate = (start + offset) % players.count
+            if predicate(players[candidate]) { return candidate }
         }
-    }
-
-    static func normalizedBoard(_ board: [Card], players: [Player] = []) -> [Card] {
-        var seen = Set(players.flatMap(\.holeCards))
-        return Array(board.filter { seen.insert($0).inserted }.prefix(5))
-    }
-
-    static func normalizedDeck(_ deck: [Card], players: [Player], board: [Card]) -> [Card] {
-        var seen = Set(board)
-        players.flatMap(\.holeCards).forEach { seen.insert($0) }
-        return deck.filter { seen.insert($0).inserted }
-    }
-
-    static func normalizedStreet(_ street: Street, isHandComplete: Bool) -> Street {
-        isHandComplete ? .showdown : street
-    }
-
-    static func normalizedPot(_ pot: Int, isHandComplete: Bool) -> Int {
-        isHandComplete ? 0 : max(0, pot)
-    }
-
-    static func normalizedCurrentBet(_ currentBet: Int, players: [Player], isHandComplete: Bool) -> Int {
-        guard !isHandComplete else { return 0 }
-        let highestPlayerBet = players.map(\.bet).max() ?? 0
-        return max(0, currentBet, highestPlayerBet)
-    }
-
-    static func normalizedCurrentActor(_ index: Int?, players: [Player], isHandComplete: Bool) -> Int? {
-        guard !isHandComplete, let index, players.indices.contains(index), players[index].canAct else {
-            return nil
-        }
-        return index
-    }
-
-    static func normalizedResults(_ results: [HandResult]?, players: [Player], board: [Card]) -> [HandResult]? {
-        guard let results else { return nil }
-        let playerIDs = Set(players.map(\.id))
-        let visibleCards = Set(board + players.flatMap(\.holeCards))
-        var order: [String] = []
-        var merged: [String: HandResult] = [:]
-        for result in results {
-            guard playerIDs.contains(result.playerID) else { continue }
-            var copy = result
-            copy.amountWon = max(0, copy.amountWon)
-            if let bestFive = copy.bestFive, Set(bestFive).count != 5 || !Set(bestFive).isSubset(of: visibleCards) {
-                copy.bestFive = nil
-            }
-
-            if var existing = merged[copy.playerID] {
-                existing.amountWon += copy.amountWon
-                merged[copy.playerID] = existing
-            } else {
-                order.append(copy.playerID)
-                merged[copy.playerID] = copy
-            }
-        }
-        let normalized = order.compactMap { merged[$0] }
-        return normalized.isEmpty ? nil : normalized
+        return nil
     }
 }

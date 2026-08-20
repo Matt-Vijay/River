@@ -7,53 +7,58 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		001FCDF171A01DF64FCF6C3C /* RiverMessagesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DDE6FADA48EF5E1CAC20FE6D /* RiverMessagesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		22CA8D6B0FE52FC65DA66078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 57E5B88C5F18448B136AFCDA /* Assets.xcassets */; };
-		2F04B808DBB5620A3DEC11B3 /* HoldemUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1B39682C5972343848F71C39 /* HoldemUI */; };
-		4797A2ECCCF169B1F1AB0BEE /* MessagePayloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B55298344D9BED11A8DDF36 /* MessagePayloads.swift */; };
-		545E450F6F93185C362371F8 /* MessagesViewControllerRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B9B41E8664AA23177F443B /* MessagesViewControllerRendering.swift */; };
-		5C4ADE297C1C6A56A967B4FF /* TableMessageCommitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C18CB2666E09E11906B11CC3 /* TableMessageCommitter.swift */; };
-		5D3D97947EB42B5E35DD242B /* MessagesViewControllerActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6457F1587ADAF1ECA25F9C32 /* MessagesViewControllerActions.swift */; };
-		632F0FB500B224DBF55AF44C /* MessageSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934889C5F10566177F293C16 /* MessageSender.swift */; };
-		6916EC64110783B4C01DB3D1 /* TableMessageActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0507926E2BC04405FE8FF4C1 /* TableMessageActions.swift */; };
-		91F519D64FD762574DD375C3 /* TableMessageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 762CD3C9646FE0D9D15E3D99 /* TableMessageRenderer.swift */; };
-		951C6F627D64576BE4E3AEC9 /* MessagesViewControllerSending.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAE8BCDDB6B22926EE89EB3 /* MessagesViewControllerSending.swift */; };
-		AC97923B8D55F223B1CC2225 /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = B159D1CC0CD3BBEA884369F7 /* GameCore */; };
-		B65AB1C170F05B7036007085 /* SwiftUIRootHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B78888EA55E40BBBD6A962D /* SwiftUIRootHost.swift */; };
-		CC988B56E16664FF432CEA31 /* RiverInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DE60D2E3DBDFE9444E8FD6 /* RiverInteractionTests.swift */; };
-		CFFAB57FD1ED094C70FDF1F5 /* MessageTableSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B656B9A32BE7633BFB74021 /* MessageTableSettings.swift */; };
-		D8DCB512F1B83471BCCD8110 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 48F6AA70C1E45D6109515104 /* Assets.xcassets */; };
-		DECE7CD9700D10B2C50F8CB6 /* HoldemUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9EFCAA285187A18349AE0864 /* HoldemUI */; };
-		E9367D7432016BA313BF4C72 /* LatestRevisionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552D5A35020FEA3F30027868 /* LatestRevisionStore.swift */; };
-		F56AF4071696E47B33EEE5C6 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3FFC665F88E5B19DEC3C60C /* MessagesViewController.swift */; };
-		FA88BD673DFE407E56083C3B /* River.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90EB326BDD38F821837BB73D /* River.swift */; };
+		025AED77D04D7F80B9824D96 /* RiverMessagesInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AED947E923C39338587A05B7 /* RiverMessagesInteractionTests.swift */; };
+		087A501860A3692DEC187968 /* AppAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AE0116DCB9F5F29F058ADC74 /* AppAssets.xcassets */; };
+		20880855A11CA8A85BED32AB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47CAACB0218D10193B71E2E1 /* Assets.xcassets */; };
+		25717E23C3C122A51981FB5D /* River.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8E36482A6171C4542C4D42C /* River.swift */; };
+		74D797A4417460109BF9AF24 /* MessagesViewControllerSending.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC9249E04D36458E88050E1E /* MessagesViewControllerSending.swift */; };
+		75A869FDFF2BFC6971D22B7B /* RiverMessagesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085B91E4FFF58BA61EFDEE64 /* RiverMessagesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7F927A41658A91A88B5E14B5 /* HoldemUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9A9B1385AA5890261DE20000 /* HoldemUI */; };
+		804CBE22DD0975E0774D760B /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C507BC82673645D240CD6799 /* MessagesViewController.swift */; };
+		930DF8FB35E80E76C9D5590F /* MessagePayloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B43F30997B303DA4CB0D58 /* MessagePayloads.swift */; };
+		9E04C295B6B2C00E2BFE5B9B /* RiverInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 737FA785448C1F7BC37B6CF8 /* RiverInteractionTests.swift */; };
+		AB31F238D964842DB3136435 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */; };
+		B526A93AA1F6EB84E42D239A /* MessagesViewControllerRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D71E7B258442C2C7D2DB2ED /* MessagesViewControllerRendering.swift */; };
+		C3C35F44CBB81814977B374E /* HoldemUI in Frameworks */ = {isa = PBXBuildFile; productRef = F2E22C9344DFACA2A3B5553D /* HoldemUI */; };
+		C5D6BA3B73DD9323B661BED4 /* SwiftUIRootHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0D09EE991B5B8488836390 /* SwiftUIRootHost.swift */; };
+		D8AD9C63495905DA41648727 /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7FACAA3B8E27F93AD7658CAA /* GameCore */; };
+		E6633CC7F6C607760E64A479 /* LatestRevisionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D8DE420C2F111DEB1634EA /* LatestRevisionStore.swift */; };
+		EB90F9E515C2B7828B23211B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */; };
+		FD72318788A853FC134002E5 /* AppAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AE0116DCB9F5F29F058ADC74 /* AppAssets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		12C55ADDD1D50DC0742A63A3 /* PBXContainerItemProxy */ = {
+		3914937FE4A6F33210F7E66C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 4E53874E8A215A66AC781D6B /* Project object */;
+			containerPortal = 1111CDE7BEEF717E1E0BB5C9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 3E3BE9AF3612299D01F3E84D;
+			remoteGlobalIDString = 2E5547EBF3C62BD425B1B3E0;
+			remoteInfo = River;
+		};
+		CF8AA2546096020DA66DDA0A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1111CDE7BEEF717E1E0BB5C9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B2E1D6A52DCBF4B2CF8BF3B2;
 			remoteInfo = RiverMessagesExtension;
 		};
-		C4366573FE07CC639142CF97 /* PBXContainerItemProxy */ = {
+		DA136C077AF226D04709306D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 4E53874E8A215A66AC781D6B /* Project object */;
+			containerPortal = 1111CDE7BEEF717E1E0BB5C9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 05CC57DEB1DF4F4B4D7A8D53;
-			remoteInfo = River;
+			remoteGlobalIDString = D7CE16DF1CF27F10F182730A;
+			remoteInfo = RiverMessages;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		F4FDE21DDC55F5455E1E7E60 /* Embed Foundation Extensions */ = {
+		092E899B3A5D0B80133772A3 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				001FCDF171A01DF64FCF6C3C /* RiverMessagesExtension.appex in Embed Foundation Extensions */,
+				75A869FDFF2BFC6971D22B7B /* RiverMessagesExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -61,137 +66,157 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		0507926E2BC04405FE8FF4C1 /* TableMessageActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableMessageActions.swift; sourceTree = "<group>"; };
-		0B656B9A32BE7633BFB74021 /* MessageTableSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageTableSettings.swift; sourceTree = "<group>"; };
-		124313478484E562C7B05A2E /* RiverUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RiverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3B55298344D9BED11A8DDF36 /* MessagePayloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePayloads.swift; sourceTree = "<group>"; };
-		48F6AA70C1E45D6109515104 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		552D5A35020FEA3F30027868 /* LatestRevisionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatestRevisionStore.swift; sourceTree = "<group>"; };
-		57E5B88C5F18448B136AFCDA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		5B78888EA55E40BBBD6A962D /* SwiftUIRootHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIRootHost.swift; sourceTree = "<group>"; };
-		6457F1587ADAF1ECA25F9C32 /* MessagesViewControllerActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerActions.swift; sourceTree = "<group>"; };
-		762CD3C9646FE0D9D15E3D99 /* TableMessageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableMessageRenderer.swift; sourceTree = "<group>"; };
-		90B96BDFA512AC6F10342A55 /* GameCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GameCore; path = GameCore; sourceTree = SOURCE_ROOT; };
-		90EB326BDD38F821837BB73D /* River.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = River.swift; sourceTree = "<group>"; };
-		934889C5F10566177F293C16 /* MessageSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSender.swift; sourceTree = "<group>"; };
-		9EAE8BCDDB6B22926EE89EB3 /* MessagesViewControllerSending.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerSending.swift; sourceTree = "<group>"; };
-		A3DE60D2E3DBDFE9444E8FD6 /* RiverInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiverInteractionTests.swift; sourceTree = "<group>"; };
-		A613D5E7BABF2911522EB2F7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		A9B9B41E8664AA23177F443B /* MessagesViewControllerRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerRendering.swift; sourceTree = "<group>"; };
-		B316AA8E4AAC03525232432E /* RiverMessages.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RiverMessages.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C18CB2666E09E11906B11CC3 /* TableMessageCommitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableMessageCommitter.swift; sourceTree = "<group>"; };
-		C3FFC665F88E5B19DEC3C60C /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
-		D526E7A4664E477D52C350E2 /* River.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = River.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		DDE6FADA48EF5E1CAC20FE6D /* RiverMessagesExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RiverMessagesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		085B91E4FFF58BA61EFDEE64 /* RiverMessagesExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RiverMessagesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		30861353134FF039E6227447 /* River.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = River.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E0D09EE991B5B8488836390 /* SwiftUIRootHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIRootHost.swift; sourceTree = "<group>"; };
+		45D8DE420C2F111DEB1634EA /* LatestRevisionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatestRevisionStore.swift; sourceTree = "<group>"; };
+		47CAACB0218D10193B71E2E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		66740829813F1A24104DDE23 /* RiverUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RiverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		737FA785448C1F7BC37B6CF8 /* RiverInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiverInteractionTests.swift; sourceTree = "<group>"; };
+		7D71E7B258442C2C7D2DB2ED /* MessagesViewControllerRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerRendering.swift; sourceTree = "<group>"; };
+		840379BB6BA1B6D862CBA5CD /* RiverMessagesInteractionTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RiverMessagesInteractionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A9B43F30997B303DA4CB0D58 /* MessagePayloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePayloads.swift; sourceTree = "<group>"; };
+		AE0116DCB9F5F29F058ADC74 /* AppAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppAssets.xcassets; sourceTree = "<group>"; };
+		AED947E923C39338587A05B7 /* RiverMessagesInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiverMessagesInteractionTests.swift; sourceTree = "<group>"; };
+		B471DBFC1F65FA2AF642A464 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C507BC82673645D240CD6799 /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
+		C8E36482A6171C4542C4D42C /* River.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = River.swift; sourceTree = "<group>"; };
+		DA7DAE6A66ADA8D76B308241 /* GameCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GameCore; path = GameCore; sourceTree = SOURCE_ROOT; };
+		DC9249E04D36458E88050E1E /* MessagesViewControllerSending.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerSending.swift; sourceTree = "<group>"; };
+		F3BF93C594E08ED938ACFF6C /* RiverMessages.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RiverMessages.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		29A62900DE602266D70748C3 /* Frameworks */ = {
+		3EAF428B29F3AF9324560545 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2F04B808DBB5620A3DEC11B3 /* HoldemUI in Frameworks */,
+				D8AD9C63495905DA41648727 /* GameCore in Frameworks */,
+				7F927A41658A91A88B5E14B5 /* HoldemUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C8BFF940D8AACC38114ED5C2 /* Frameworks */ = {
+		DF30D951D13B06783751D9CF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AC97923B8D55F223B1CC2225 /* GameCore in Frameworks */,
-				DECE7CD9700D10B2C50F8CB6 /* HoldemUI in Frameworks */,
+				C3C35F44CBB81814977B374E /* HoldemUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		1CA4E7A53AC20049D0610ADF = {
+		12FE704C57F230F115B91FBF /* River */ = {
 			isa = PBXGroup;
 			children = (
-				2608724F05BFFBF5AE0B127B /* River */,
-				408D480C036FF465E94F5FE5 /* RiverUITests */,
-				4EF5F113272711B9895F1CA8 /* MessagesExtension */,
-				B1C55574F4E21711CBB3AC23 /* MessagesHost */,
-				D9D9C610AD0B5931ED2A3364 /* Packages */,
-				C5D2B43BA7FFB5E3AE51CE52 /* Products */,
-			);
-			sourceTree = "<group>";
-		};
-		2608724F05BFFBF5AE0B127B /* River */ = {
-			isa = PBXGroup;
-			children = (
-				48F6AA70C1E45D6109515104 /* Assets.xcassets */,
-				90EB326BDD38F821837BB73D /* River.swift */,
+				C8E36482A6171C4542C4D42C /* River.swift */,
 			);
 			path = River;
 			sourceTree = "<group>";
 		};
-		408D480C036FF465E94F5FE5 /* RiverUITests */ = {
+		6B53E0B038F83EC516CD4CCC /* MessagesExtension */ = {
 			isa = PBXGroup;
 			children = (
-				A3DE60D2E3DBDFE9444E8FD6 /* RiverInteractionTests.swift */,
-			);
-			path = RiverUITests;
-			sourceTree = "<group>";
-		};
-		4EF5F113272711B9895F1CA8 /* MessagesExtension */ = {
-			isa = PBXGroup;
-			children = (
-				A613D5E7BABF2911522EB2F7 /* Info.plist */,
-				552D5A35020FEA3F30027868 /* LatestRevisionStore.swift */,
-				3B55298344D9BED11A8DDF36 /* MessagePayloads.swift */,
-				934889C5F10566177F293C16 /* MessageSender.swift */,
-				C3FFC665F88E5B19DEC3C60C /* MessagesViewController.swift */,
-				6457F1587ADAF1ECA25F9C32 /* MessagesViewControllerActions.swift */,
-				A9B9B41E8664AA23177F443B /* MessagesViewControllerRendering.swift */,
-				9EAE8BCDDB6B22926EE89EB3 /* MessagesViewControllerSending.swift */,
-				0B656B9A32BE7633BFB74021 /* MessageTableSettings.swift */,
-				5B78888EA55E40BBBD6A962D /* SwiftUIRootHost.swift */,
-				0507926E2BC04405FE8FF4C1 /* TableMessageActions.swift */,
-				C18CB2666E09E11906B11CC3 /* TableMessageCommitter.swift */,
-				762CD3C9646FE0D9D15E3D99 /* TableMessageRenderer.swift */,
+				B471DBFC1F65FA2AF642A464 /* Info.plist */,
+				45D8DE420C2F111DEB1634EA /* LatestRevisionStore.swift */,
+				A9B43F30997B303DA4CB0D58 /* MessagePayloads.swift */,
+				C507BC82673645D240CD6799 /* MessagesViewController.swift */,
+				7D71E7B258442C2C7D2DB2ED /* MessagesViewControllerRendering.swift */,
+				DC9249E04D36458E88050E1E /* MessagesViewControllerSending.swift */,
+				3E0D09EE991B5B8488836390 /* SwiftUIRootHost.swift */,
 			);
 			path = MessagesExtension;
 			sourceTree = "<group>";
 		};
-		B1C55574F4E21711CBB3AC23 /* MessagesHost */ = {
+		6BA401661F6C16A4F608226D /* RiverMessagesInteractionTests */ = {
 			isa = PBXGroup;
 			children = (
-				57E5B88C5F18448B136AFCDA /* Assets.xcassets */,
+				AED947E923C39338587A05B7 /* RiverMessagesInteractionTests.swift */,
 			);
-			path = MessagesHost;
+			path = RiverMessagesInteractionTests;
 			sourceTree = "<group>";
 		};
-		C5D2B43BA7FFB5E3AE51CE52 /* Products */ = {
+		B08359D185E9211107825A42 = {
 			isa = PBXGroup;
 			children = (
-				D526E7A4664E477D52C350E2 /* River.app */,
-				124313478484E562C7B05A2E /* RiverUITests.xctest */,
-				B316AA8E4AAC03525232432E /* RiverMessages.app */,
-				DDE6FADA48EF5E1CAC20FE6D /* RiverMessagesExtension.appex */,
+				AE0116DCB9F5F29F058ADC74 /* AppAssets.xcassets */,
+				A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */,
+				6B53E0B038F83EC516CD4CCC /* MessagesExtension */,
+				EF49B1232E3ECD42395ADBDE /* MessagesExtensionAssets */,
+				E19228AC31A764FDECF620EB /* Packages */,
+				12FE704C57F230F115B91FBF /* River */,
+				6BA401661F6C16A4F608226D /* RiverMessagesInteractionTests */,
+				FF21A777F3118C9106E39675 /* RiverUITests */,
+				D8A528121E22538390D4F030 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D8A528121E22538390D4F030 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				30861353134FF039E6227447 /* River.app */,
+				F3BF93C594E08ED938ACFF6C /* RiverMessages.app */,
+				085B91E4FFF58BA61EFDEE64 /* RiverMessagesExtension.appex */,
+				840379BB6BA1B6D862CBA5CD /* RiverMessagesInteractionTests.xctest */,
+				66740829813F1A24104DDE23 /* RiverUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D9D9C610AD0B5931ED2A3364 /* Packages */ = {
+		E19228AC31A764FDECF620EB /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				90B96BDFA512AC6F10342A55 /* GameCore */,
+				DA7DAE6A66ADA8D76B308241 /* GameCore */,
 			);
 			name = Packages;
+			sourceTree = "<group>";
+		};
+		EF49B1232E3ECD42395ADBDE /* MessagesExtensionAssets */ = {
+			isa = PBXGroup;
+			children = (
+				47CAACB0218D10193B71E2E1 /* Assets.xcassets */,
+			);
+			path = MessagesExtensionAssets;
+			sourceTree = "<group>";
+		};
+		FF21A777F3118C9106E39675 /* RiverUITests */ = {
+			isa = PBXGroup;
+			children = (
+				737FA785448C1F7BC37B6CF8 /* RiverInteractionTests.swift */,
+			);
+			path = RiverUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		05CC57DEB1DF4F4B4D7A8D53 /* River */ = {
+		10AF8A55EB905652D7EE2853 /* RiverUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7552C8894C68BE9783CBF404 /* Build configuration list for PBXNativeTarget "River" */;
+			buildConfigurationList = E2AF87DD4A3B3A62F486B5DA /* Build configuration list for PBXNativeTarget "RiverUITests" */;
 			buildPhases = (
-				24EE0FDA08BF4C8E4EE55079 /* Sources */,
-				2566181A4546A1C869CF616A /* Resources */,
-				29A62900DE602266D70748C3 /* Frameworks */,
+				87F29295965047356ED212AC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2B2D843C5542E23E18B5717B /* PBXTargetDependency */,
+			);
+			name = RiverUITests;
+			packageProductDependencies = (
+			);
+			productName = RiverUITests;
+			productReference = 66740829813F1A24104DDE23 /* RiverUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		2E5547EBF3C62BD425B1B3E0 /* River */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 61CEE7648F21B9C0BB6DB75F /* Build configuration list for PBXNativeTarget "River" */;
+			buildPhases = (
+				6A1DAC42A6D5112D135ECCB8 /* Sources */,
+				7C33328FE12B5EF9C01739A9 /* Resources */,
+				DF30D951D13B06783751D9CF /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -199,18 +224,37 @@
 			);
 			name = River;
 			packageProductDependencies = (
-				1B39682C5972343848F71C39 /* HoldemUI */,
+				F2E22C9344DFACA2A3B5553D /* HoldemUI */,
 			);
 			productName = River;
-			productReference = D526E7A4664E477D52C350E2 /* River.app */;
+			productReference = 30861353134FF039E6227447 /* River.app */;
 			productType = "com.apple.product-type.application";
 		};
-		3E3BE9AF3612299D01F3E84D /* RiverMessagesExtension */ = {
+		5B55FBB87F45D10B7D4C52B7 /* RiverMessagesInteractionTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0C0500BBA8F3A5C43DEFD487 /* Build configuration list for PBXNativeTarget "RiverMessagesExtension" */;
+			buildConfigurationList = 7F5C5F0BDD5A05CDAC2A1B18 /* Build configuration list for PBXNativeTarget "RiverMessagesInteractionTests" */;
 			buildPhases = (
-				36390E0E613FA831B0CFC9CA /* Sources */,
-				C8BFF940D8AACC38114ED5C2 /* Frameworks */,
+				70684936198A7FD99488D733 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				ADA6362599CE6A1D23BBF037 /* PBXTargetDependency */,
+			);
+			name = RiverMessagesInteractionTests;
+			packageProductDependencies = (
+			);
+			productName = RiverMessagesInteractionTests;
+			productReference = 840379BB6BA1B6D862CBA5CD /* RiverMessagesInteractionTests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		B2E1D6A52DCBF4B2CF8BF3B2 /* RiverMessagesExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5D37A381066F22A6A0278CBA /* Build configuration list for PBXNativeTarget "RiverMessagesExtension" */;
+			buildPhases = (
+				FDBD32E8CC47CF103293FD95 /* Sources */,
+				4308C030E66D276496627C71 /* Resources */,
+				3EAF428B29F3AF9324560545 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -218,180 +262,204 @@
 			);
 			name = RiverMessagesExtension;
 			packageProductDependencies = (
-				B159D1CC0CD3BBEA884369F7 /* GameCore */,
-				9EFCAA285187A18349AE0864 /* HoldemUI */,
+				7FACAA3B8E27F93AD7658CAA /* GameCore */,
+				9A9B1385AA5890261DE20000 /* HoldemUI */,
 			);
 			productName = RiverMessagesExtension;
-			productReference = DDE6FADA48EF5E1CAC20FE6D /* RiverMessagesExtension.appex */;
+			productReference = 085B91E4FFF58BA61EFDEE64 /* RiverMessagesExtension.appex */;
 			productType = "com.apple.product-type.app-extension.messages";
 		};
-		8B25D7D788009E52E5BC9A2D /* RiverUITests */ = {
+		D7CE16DF1CF27F10F182730A /* RiverMessages */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CC68AB02575449B96F9A0410 /* Build configuration list for PBXNativeTarget "RiverUITests" */;
+			buildConfigurationList = AA55340365CE5F34B3603D74 /* Build configuration list for PBXNativeTarget "RiverMessages" */;
 			buildPhases = (
-				767480E968DF13930A9F1BAD /* Sources */,
+				905AECB4235573B581AB95B0 /* Resources */,
+				092E899B3A5D0B80133772A3 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				80C76C8F12DAABEF588F2763 /* PBXTargetDependency */,
-			);
-			name = RiverUITests;
-			packageProductDependencies = (
-			);
-			productName = RiverUITests;
-			productReference = 124313478484E562C7B05A2E /* RiverUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
-		8DC53789EA8E8AE18F3AC73F /* RiverMessages */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 97B8732240136C7DAB04138C /* Build configuration list for PBXNativeTarget "RiverMessages" */;
-			buildPhases = (
-				D3818AA346C4C1D74DBF2DF4 /* Resources */,
-				F4FDE21DDC55F5455E1E7E60 /* Embed Foundation Extensions */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				BDB65FD6DBDB0DF63A3D3D92 /* PBXTargetDependency */,
+				771CC25E7585DF4FD60F593F /* PBXTargetDependency */,
 			);
 			name = RiverMessages;
 			packageProductDependencies = (
 			);
 			productName = RiverMessages;
-			productReference = B316AA8E4AAC03525232432E /* RiverMessages.app */;
+			productReference = F3BF93C594E08ED938ACFF6C /* RiverMessages.app */;
 			productType = "com.apple.product-type.application.messages";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		4E53874E8A215A66AC781D6B /* Project object */ = {
+		1111CDE7BEEF717E1E0BB5C9 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
-					8B25D7D788009E52E5BC9A2D = {
-						TestTargetID = 05CC57DEB1DF4F4B4D7A8D53;
+					10AF8A55EB905652D7EE2853 = {
+						TestTargetID = 2E5547EBF3C62BD425B1B3E0;
+					};
+					5B55FBB87F45D10B7D4C52B7 = {
+						TestTargetID = D7CE16DF1CF27F10F182730A;
 					};
 				};
 			};
-			buildConfigurationList = 4EF85200F82EC0D6D3092297 /* Build configuration list for PBXProject "River" */;
+			buildConfigurationList = 0E8F356653DDD753CEA035C8 /* Build configuration list for PBXProject "River" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
 				en,
 			);
-			mainGroup = 1CA4E7A53AC20049D0610ADF;
+			mainGroup = B08359D185E9211107825A42;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				10B0ECE9C77A4627C2281014 /* XCLocalSwiftPackageReference "GameCore" */,
+				3AEE5681BDBF74587AD40814 /* XCLocalSwiftPackageReference "GameCore" */,
 			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = C5D2B43BA7FFB5E3AE51CE52 /* Products */;
+			productRefGroup = D8A528121E22538390D4F030 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				05CC57DEB1DF4F4B4D7A8D53 /* River */,
-				8B25D7D788009E52E5BC9A2D /* RiverUITests */,
-				8DC53789EA8E8AE18F3AC73F /* RiverMessages */,
-				3E3BE9AF3612299D01F3E84D /* RiverMessagesExtension */,
+				2E5547EBF3C62BD425B1B3E0 /* River */,
+				D7CE16DF1CF27F10F182730A /* RiverMessages */,
+				B2E1D6A52DCBF4B2CF8BF3B2 /* RiverMessagesExtension */,
+				5B55FBB87F45D10B7D4C52B7 /* RiverMessagesInteractionTests */,
+				10AF8A55EB905652D7EE2853 /* RiverUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		2566181A4546A1C869CF616A /* Resources */ = {
+		4308C030E66D276496627C71 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D8DCB512F1B83471BCCD8110 /* Assets.xcassets in Resources */,
+				20880855A11CA8A85BED32AB /* Assets.xcassets in Resources */,
+				EB90F9E515C2B7828B23211B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D3818AA346C4C1D74DBF2DF4 /* Resources */ = {
+		7C33328FE12B5EF9C01739A9 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				22CA8D6B0FE52FC65DA66078 /* Assets.xcassets in Resources */,
+				087A501860A3692DEC187968 /* AppAssets.xcassets in Resources */,
+				AB31F238D964842DB3136435 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		905AECB4235573B581AB95B0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FD72318788A853FC134002E5 /* AppAssets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		24EE0FDA08BF4C8E4EE55079 /* Sources */ = {
+		6A1DAC42A6D5112D135ECCB8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FA88BD673DFE407E56083C3B /* River.swift in Sources */,
+				25717E23C3C122A51981FB5D /* River.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		36390E0E613FA831B0CFC9CA /* Sources */ = {
+		70684936198A7FD99488D733 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E9367D7432016BA313BF4C72 /* LatestRevisionStore.swift in Sources */,
-				4797A2ECCCF169B1F1AB0BEE /* MessagePayloads.swift in Sources */,
-				632F0FB500B224DBF55AF44C /* MessageSender.swift in Sources */,
-				CFFAB57FD1ED094C70FDF1F5 /* MessageTableSettings.swift in Sources */,
-				F56AF4071696E47B33EEE5C6 /* MessagesViewController.swift in Sources */,
-				5D3D97947EB42B5E35DD242B /* MessagesViewControllerActions.swift in Sources */,
-				545E450F6F93185C362371F8 /* MessagesViewControllerRendering.swift in Sources */,
-				951C6F627D64576BE4E3AEC9 /* MessagesViewControllerSending.swift in Sources */,
-				B65AB1C170F05B7036007085 /* SwiftUIRootHost.swift in Sources */,
-				6916EC64110783B4C01DB3D1 /* TableMessageActions.swift in Sources */,
-				5C4ADE297C1C6A56A967B4FF /* TableMessageCommitter.swift in Sources */,
-				91F519D64FD762574DD375C3 /* TableMessageRenderer.swift in Sources */,
+				025AED77D04D7F80B9824D96 /* RiverMessagesInteractionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		767480E968DF13930A9F1BAD /* Sources */ = {
+		87F29295965047356ED212AC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CC988B56E16664FF432CEA31 /* RiverInteractionTests.swift in Sources */,
+				9E04C295B6B2C00E2BFE5B9B /* RiverInteractionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FDBD32E8CC47CF103293FD95 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E6633CC7F6C607760E64A479 /* LatestRevisionStore.swift in Sources */,
+				930DF8FB35E80E76C9D5590F /* MessagePayloads.swift in Sources */,
+				804CBE22DD0975E0774D760B /* MessagesViewController.swift in Sources */,
+				B526A93AA1F6EB84E42D239A /* MessagesViewControllerRendering.swift in Sources */,
+				74D797A4417460109BF9AF24 /* MessagesViewControllerSending.swift in Sources */,
+				C5D6BA3B73DD9323B661BED4 /* SwiftUIRootHost.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		80C76C8F12DAABEF588F2763 /* PBXTargetDependency */ = {
+		2B2D843C5542E23E18B5717B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 05CC57DEB1DF4F4B4D7A8D53 /* River */;
-			targetProxy = C4366573FE07CC639142CF97 /* PBXContainerItemProxy */;
+			target = 2E5547EBF3C62BD425B1B3E0 /* River */;
+			targetProxy = 3914937FE4A6F33210F7E66C /* PBXContainerItemProxy */;
 		};
-		BDB65FD6DBDB0DF63A3D3D92 /* PBXTargetDependency */ = {
+		771CC25E7585DF4FD60F593F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3E3BE9AF3612299D01F3E84D /* RiverMessagesExtension */;
-			targetProxy = 12C55ADDD1D50DC0742A63A3 /* PBXContainerItemProxy */;
+			target = B2E1D6A52DCBF4B2CF8BF3B2 /* RiverMessagesExtension */;
+			targetProxy = CF8AA2546096020DA66DDA0A /* PBXContainerItemProxy */;
+		};
+		ADA6362599CE6A1D23BBF037 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D7CE16DF1CF27F10F182730A /* RiverMessages */;
+			targetProxy = DA136C077AF226D04709306D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		31ED1FDD8B251AB4E69A8BA9 /* Debug */ = {
+		52409E7B192654B307C71088 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
-				CODE_SIGNING_ALLOWED = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = River.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_FILE = MessagesExtension/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = River;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.imsg.extension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.standalone;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
-		49BA4DB81CFBCF729BC41BA4 /* Debug */ = {
+		6828A6D60E5D82D3368094F7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = River;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		778B5E3D08343B579F01BE34 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -454,7 +522,29 @@
 			};
 			name = Debug;
 		};
-		59091A380D1236C2C80BD3FE /* Debug */ = {
+		78F2ACC1F6952E935DFD337D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = River.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = River;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.standalone;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		9BF3A2927A5EB122B61A3A53 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -465,33 +555,14 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.app.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.uitests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = River;
-			};
-			name = Debug;
-		};
-		6C452B9D7E6E6793F0C36F7D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_ALLOWED = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "River";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.imsg;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = RiverMessages;
 			};
 			name = Release;
 		};
-		7C41739D342D9FC8E1D9C26B /* Release */ = {
+		9CE45E20D0492A64B4BCB9AE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -502,96 +573,14 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.app.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.standalone.uitests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = River;
 			};
 			name = Release;
 		};
-		7CFCFACDC6CA0B3CCA2A3B49 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_ALLOWED = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "River";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.imsg;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		962E77CE74F0153E9BEAB82B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
-				CODE_SIGNING_ALLOWED = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_FILE = MessagesExtension/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.imsg.extension;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
-		9801DB21180C283746E37668 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_ALLOWED = NO;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "River";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.app;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		9B04920B49241DCB151FBA0C /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_ALLOWED = NO;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "River";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.river.app;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
-		F9167D9844871C0C6FC667C0 /* Release */ = {
+		C16AD038AF5F092C2BC2C412 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -647,50 +636,151 @@
 			};
 			name = Release;
 		};
+		C3251A9E0262C81A36AFFC2E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = River;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		C3C61011EDD8571AC0A60269 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = RiverMessages;
+			};
+			name = Debug;
+		};
+		D64C27805EC4F7D28691E642 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.standalone.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = River;
+			};
+			name = Debug;
+		};
+		ECC3E2B0C56E59B8A252441D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CODE_SIGN_ENTITLEMENTS = River.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = MessagesExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.messages;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F11A6276DD46EF2662123998 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CODE_SIGN_ENTITLEMENTS = River.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = MessagesExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.messages;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0C0500BBA8F3A5C43DEFD487 /* Build configuration list for PBXNativeTarget "RiverMessagesExtension" */ = {
+		0E8F356653DDD753CEA035C8 /* Build configuration list for PBXProject "River" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				31ED1FDD8B251AB4E69A8BA9 /* Debug */,
-				962E77CE74F0153E9BEAB82B /* Release */,
+				778B5E3D08343B579F01BE34 /* Debug */,
+				C16AD038AF5F092C2BC2C412 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		4EF85200F82EC0D6D3092297 /* Build configuration list for PBXProject "River" */ = {
+		5D37A381066F22A6A0278CBA /* Build configuration list for PBXNativeTarget "RiverMessagesExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				49BA4DB81CFBCF729BC41BA4 /* Debug */,
-				F9167D9844871C0C6FC667C0 /* Release */,
+				ECC3E2B0C56E59B8A252441D /* Debug */,
+				F11A6276DD46EF2662123998 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		7552C8894C68BE9783CBF404 /* Build configuration list for PBXNativeTarget "River" */ = {
+		61CEE7648F21B9C0BB6DB75F /* Build configuration list for PBXNativeTarget "River" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				9801DB21180C283746E37668 /* Debug */,
-				9B04920B49241DCB151FBA0C /* Release */,
+				52409E7B192654B307C71088 /* Debug */,
+				78F2ACC1F6952E935DFD337D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		97B8732240136C7DAB04138C /* Build configuration list for PBXNativeTarget "RiverMessages" */ = {
+		7F5C5F0BDD5A05CDAC2A1B18 /* Build configuration list for PBXNativeTarget "RiverMessagesInteractionTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				7CFCFACDC6CA0B3CCA2A3B49 /* Debug */,
-				6C452B9D7E6E6793F0C36F7D /* Release */,
+				C3C61011EDD8571AC0A60269 /* Debug */,
+				9BF3A2927A5EB122B61A3A53 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		CC68AB02575449B96F9A0410 /* Build configuration list for PBXNativeTarget "RiverUITests" */ = {
+		AA55340365CE5F34B3603D74 /* Build configuration list for PBXNativeTarget "RiverMessages" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				59091A380D1236C2C80BD3FE /* Debug */,
-				7C41739D342D9FC8E1D9C26B /* Release */,
+				C3251A9E0262C81A36AFFC2E /* Debug */,
+				6828A6D60E5D82D3368094F7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E2AF87DD4A3B3A62F486B5DA /* Build configuration list for PBXNativeTarget "RiverUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64C27805EC4F7D28691E642 /* Debug */,
+				9CE45E20D0492A64B4BCB9AE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -698,26 +788,26 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		10B0ECE9C77A4627C2281014 /* XCLocalSwiftPackageReference "GameCore" */ = {
+		3AEE5681BDBF74587AD40814 /* XCLocalSwiftPackageReference "GameCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = GameCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		1B39682C5972343848F71C39 /* HoldemUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = HoldemUI;
-		};
-		9EFCAA285187A18349AE0864 /* HoldemUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = HoldemUI;
-		};
-		B159D1CC0CD3BBEA884369F7 /* GameCore */ = {
+		7FACAA3B8E27F93AD7658CAA /* GameCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GameCore;
 		};
+		9A9B1385AA5890261DE20000 /* HoldemUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HoldemUI;
+		};
+		F2E22C9344DFACA2A3B5553D /* HoldemUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HoldemUI;
+		};
 /* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = 4E53874E8A215A66AC781D6B /* Project object */;
+	rootObject = 1111CDE7BEEF717E1E0BB5C9 /* Project object */;
 }

@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import GameCore
-import HoldemUI
+@testable import HoldemUI
 
 @Suite("Profile store")
 struct ProfileStoreTests {
@@ -14,72 +14,41 @@ struct ProfileStoreTests {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let store = ProfileStore(defaults: defaults)
-        store.save(name: "  Maverick  ", avatar: "Ace")
+        let originalPlayerID = store.playerID(seed: UUID().uuidString)
+        #expect(store.configuredProfile == nil)
+        store.save(PlayerProfile(name: "  Maverick  ", avatar: "Ace")!)
 
         let preserved = ProfileStore(defaults: defaults)
-        #expect(preserved.hasProfile)
-        #expect(preserved.name == "Maverick")
-        #expect(preserved.avatar == "Ace")
+        #expect(preserved.configuredProfile?.name == "Maverick")
+        #expect(preserved.configuredProfile?.avatar == "Ace")
 
         let reset = ProfileStore(defaults: defaults, resetProfile: true)
-        #expect(!reset.hasProfile)
+        #expect(reset.configuredProfile == nil)
+        #expect(reset.playerID(seed: UUID().uuidString) == originalPlayerID)
+
+        let replacementPlayerID = UUID().uuidString
+        defaults.set("malformed", forKey: "holdem.player.id.v1")
+        #expect(reset.playerID(seed: replacementPlayerID) == replacementPlayerID)
     }
 
     @MainActor
-    @Test("profile store normalizes blank avatars")
-    func normalizesBlankAvatars() {
+    @Test("profile store normalizes persisted profile text")
+    func normalizesPersistedProfileText() {
         let suiteName = "holdem.profile.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let store = ProfileStore(defaults: defaults)
-        store.save(name: "Maverick", avatar: "   ")
+        defaults.set([
+            "name": "  \(String(repeating: "M", count: 28))  ",
+            "avatar": "   ",
+        ], forKey: "holdem.profile")
+        let normalized = ProfileStore(defaults: defaults)
+        #expect(normalized.configuredProfile?.name == String(repeating: "M", count: 24))
+        #expect(normalized.configuredProfile?.avatar == "🙂")
 
-        #expect(store.avatar == "🙂")
-        #expect(defaults.string(forKey: "holdem.profile.avatar") == "🙂")
-
-        defaults.set("   ", forKey: "holdem.profile.avatar")
-        let restored = ProfileStore(defaults: defaults)
-
-        #expect(restored.avatar == "🙂")
-    }
-
-    @MainActor
-    @Test("profile store caps oversized avatars")
-    func capsOversizedAvatars() {
-        let suiteName = "holdem.profile.tests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let oversized = String(repeating: "A", count: ProfileText.maxAvatarLength + 4)
-
-        let store = ProfileStore(defaults: defaults)
-        store.save(name: "Maverick", avatar: oversized)
-
-        #expect(store.avatar == String(repeating: "A", count: ProfileText.maxAvatarLength))
-        #expect(defaults.string(forKey: "holdem.profile.avatar") == store.avatar)
-    }
-
-    @MainActor
-    @Test("profile store caps long names without completing blank profiles")
-    func capsLongNamesWithoutCompletingBlankProfiles() {
-        let suiteName = "holdem.profile.tests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let store = ProfileStore(defaults: defaults)
-        store.save(name: String(repeating: "M", count: ProfileText.maxNameLength + 4),
-                   avatar: "Ace")
-
-        #expect(store.name == String(repeating: "M", count: ProfileText.maxNameLength))
-        #expect(store.hasProfile)
-
-        defaults.set("   ", forKey: "holdem.profile.name")
+        defaults.set(["name": "   ", "avatar": "Ace"], forKey: "holdem.profile")
         let blank = ProfileStore(defaults: defaults)
-
-        #expect(blank.name == "")
-        #expect(!blank.hasProfile)
+        #expect(blank.configuredProfile == nil)
     }
 }

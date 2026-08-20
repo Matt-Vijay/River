@@ -1,85 +1,136 @@
 import SwiftUI
 import GameCore
 
-/// Pre-game lobby: see who's seated and ready up. Character and handle setup
-/// happen before this screen via the locally saved profile.
+/// Pre-game lobby. Character and handle setup happen before this screen via the
+/// locally saved profile.
 public struct LobbyView: View {
-    public let lobby: Lobby
-    public let localID: String
-    public var profileName: String?
-    public var profileAvatar: String?
-    public var onJoin: () -> Void
-    public var onToggleReady: () -> Void
-    /// Shown when you're seated: leave the table.
-    public var onLeave: (() -> Void)?
-    /// Edit the saved local profile before taking a seat.
-    public var onEditProfile: (() -> Void)?
-    /// Demo-only: adds a stand-in player on one device (nil in the real iMessage app).
-    public var onAddTestPlayer: (() -> Void)?
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    private let lobby: Lobby
+    private let localID: String
+    private let onOperation: (TableOperation) -> Void
+    /// Adds a local pass-and-play seat; nil in the iMessage app.
+    private let onAddPlayer: (() -> Void)?
+
+    private var isSeated: Bool { lobby.seat(id: localID) != nil }
+    private var canStart: Bool { isSeated && lobby.seats.count >= 2 }
 
     public init(lobby: Lobby, localID: String,
-                profileName: String? = nil,
-                profileAvatar: String? = nil,
-                onJoin: @escaping () -> Void,
-                onToggleReady: @escaping () -> Void,
-                onLeave: (() -> Void)? = nil,
-                onEditProfile: (() -> Void)? = nil,
-                onAddTestPlayer: (() -> Void)? = nil) {
+                onOperation: @escaping (TableOperation) -> Void,
+                onAddPlayer: (() -> Void)? = nil) {
         self.lobby = lobby
         self.localID = localID
-        self.profileName = profileName
-        self.profileAvatar = profileAvatar
-        self.onJoin = onJoin
-        self.onToggleReady = onToggleReady
-        self.onLeave = onLeave
-        self.onEditProfile = onEditProfile
-        self.onAddTestPlayer = onAddTestPlayer
+        self.onOperation = onOperation
+        self.onAddPlayer = onAddPlayer
     }
 
-    private var localSeat: LobbySeat? { lobby.seat(id: localID) }
-    private var isJoined: Bool { localSeat != nil }
-
     public var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                LobbyHeader(lobby: lobby)
-                LobbySeatList(seats: lobby.seats, localID: localID)
+        Group {
+            if verticalSizeClass == .compact {
+                ScrollView {
+                    VStack(spacing: 18) {
+                        lobbyContent
+                        lobbyActions
+                    }
+                    .padding(.bottom, 18)
+                }
+            } else {
+                ScrollView { lobbyContent }
+                    .safeAreaInset(edge: .bottom) {
+                        lobbyActions
+                            .padding(.bottom, 18)
+                            .background(Theme.background)
+                    }
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 18)
-            .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background.ignoresSafeArea())
-        .safeAreaInset(edge: .bottom) {
-            LobbyActions(
-                isJoined: isJoined,
-                isReady: localSeat?.isReady ?? false,
-                isFull: lobby.isFull,
-                profileName: isJoined ? nil : profileName,
-                profileAvatar: isJoined ? nil : profileAvatar,
-                onJoin: onJoin,
-                onToggleReady: onToggleReady,
-                onLeave: onLeave,
-                onEditProfile: isJoined ? nil : onEditProfile,
-                onAddTestPlayer: onAddTestPlayer
-            )
-            .padding(.horizontal, 24)
-            .padding(.top, 14)
-            .padding(.bottom, 18)
-            .background(Theme.background)
+    }
+
+    private var lobbyContent: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 4) {
+                Text("Table")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.white)
+                    .accessibilityAddTraits(.isHeader)
+                Text("\(lobby.seats.count)/\(lobby.maxPlayers) players")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(.top, 12)
+
+            VStack(spacing: 10) {
+                ForEach(lobby.seats) { seat in
+                    LobbySeatRow(seat: seat, isLocal: seat.id == localID)
+                }
+            }
         }
-        .animation(.tableSnap, value: lobby)
+        .padding(.horizontal, 24)
+        .padding(.top, 18)
+    }
+
+    @ViewBuilder
+    private var lobbyActions: some View {
+        VStack(spacing: 12) {
+            PrimaryActionButton(
+                title: "Start game",
+                isDisabled: !canStart,
+                accessibilityID: HoldemAccessibility.Lobby.startGame,
+                action: {
+                    onOperation(.startGame(
+                        seed: UInt64.random(in: .min ... .max),
+                        turnDuration: TurnClock.defaultDuration
+                    ))
+                }
+            )
+
+            if isSeated, let onAddPlayer, !lobby.isFull {
+                Button(action: onAddPlayer) {
+                    Label("Add player", systemImage: "plus")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.secondaryText)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableButtonStyle())
+                .accessibilityIdentifier(HoldemAccessibility.Lobby.addPlayer)
+            }
+
+            if isSeated {
+                LeaveTableButton(
+                    consequence: "You will give up your seat in the lobby.",
+                    style: .text,
+                    accessibilityID: HoldemAccessibility.Lobby.leave,
+                    confirmAccessibilityID: HoldemAccessibility.Lobby.confirmLeave,
+                    cancelAccessibilityID: HoldemAccessibility.Lobby.cancelLeave,
+                    action: { onOperation(.leaveLobby) }
+                )
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 14)
     }
 }
 
-#Preview("Lobby") {
-    LobbyView(
-        lobby: Lobby(seats: [
-            LobbySeat(id: "a", name: "dante", avatar: "🧑🏿", isReady: true),
-            LobbySeat(id: "you", name: "you", avatar: "🦊", isReady: false),
-            LobbySeat(id: "c", name: "verbice", avatar: "🐱", isReady: true),
-        ]),
-        localID: "you", onJoin: {}, onToggleReady: {}
-    )
+private struct LobbySeatRow: View {
+    let seat: LobbySeat
+    let isLocal: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(seat.avatar).font(.system(size: 30))
+            Text(seat.name)
+                .font(.body.weight(.medium))
+                .foregroundStyle(.white)
+                .stableOneLineText(alignment: .leading)
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 52)
+        .controlSurface(stroke: isLocal ? Theme.accent.opacity(0.8) : .clear)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(isLocal ? "\(seat.name), your seat" : seat.name)
+        .accessibilityIdentifier(isLocal ? HoldemAccessibility.Lobby.localSeat : "")
+    }
 }

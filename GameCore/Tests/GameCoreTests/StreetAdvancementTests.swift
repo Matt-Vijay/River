@@ -12,6 +12,7 @@ struct StreetAdvancementTests {
         try completeCurrentBettingRound(&s)
         #expect(s.street == .flop)
         #expect(s.board.count == 3)
+        #expect(s.players.allSatisfy { $0.lastActionBet == nil })
 
         try completeCurrentBettingRound(&s)
         #expect(s.street == .turn)
@@ -20,35 +21,6 @@ struct StreetAdvancementTests {
         try completeCurrentBettingRound(&s)
         #expect(s.street == .river)
         #expect(s.board.count == 5)
-    }
-
-    @Test("street advancement normalizes malformed dealer index")
-    func streetAdvancementNormalizesMalformedDealerIndex() {
-        var s = GameState.startHand(players: makePlayers([1000, 1000, 1000]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 2, handNumber: 1)
-        s.dealerIndex = -5
-
-        s.apply(.call, by: 0)
-        s.apply(.call, by: 1)
-        s.apply(.check, by: 2)
-
-        #expect(s.street == .flop)
-        #expect(s.currentToAct == 2)
-    }
-
-    @Test("street advancement tolerates malformed short decks")
-    func streetAdvancementToleratesMalformedShortDecks() throws {
-        var s = GameState.startHand(players: makePlayers([1000, 1000]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 7, handNumber: 1)
-        s.deck = cards("Ah")
-
-        try completeCurrentBettingRound(&s)
-
-        #expect(s.street == .flop)
-        #expect(s.board == cards("Ah"))
-        #expect(s.deck.isEmpty)
     }
 
     private func completeCurrentBettingRound(_ state: inout GameState) throws {

@@ -1,78 +1,86 @@
 import Testing
+
 @testable import GameCore
 
-@Suite("Side pots")
+@Suite("Side-pot settlement")
 struct SidePotTests {
-    private func stateWithCommitted(_ committed: [Int], statuses: [PlayerStatus]) -> GameState {
+    @Test("main and side pots pay their respective winners")
+    func mainAndSidePotWinners() {
+        let state = settledState(
+            committed: [100, 50, 100],
+            statuses: [.allIn, .allIn, .allIn],
+            hands: ["Qc Qd", "Ah 5h", "Jc Jh"]
+        )
+
+        #expect(state.players.map(\.stack) == [100, 150, 0])
+        #expect(winnings(in: state) == ["p0": 100, "p1": 150])
+    }
+
+    @Test("an unmatched all-in layer returns to its only eligible player")
+    func unmatchedLayer() {
+        let state = settledState(
+            committed: [300, 400],
+            statuses: [.allIn, .allIn],
+            hands: ["Ah 5h", "Qc Qd"]
+        )
+
+        #expect(state.players.map(\.stack) == [600, 100])
+        #expect(winnings(in: state) == ["p0": 600, "p1": 100])
+    }
+
+    @Test("a folded player's unmatched layer is refunded")
+    func foldedOnlyLayer() {
+        let state = settledState(
+            committed: [50, 0, 100],
+            statuses: [.allIn, .folded, .folded],
+            hands: ["", "", ""]
+        )
+
+        #expect(state.players.map(\.stack) == [100, 0, 50])
+        #expect(winnings(in: state) == ["p0": 100])
+    }
+
+    @Test("folded chips stay in the pot and odd chips start left of the dealer")
+    func foldedContributorAndOddChipOrder() {
+        let state = settledState(
+            committed: [1, 1, 1],
+            statuses: [.allIn, .folded, .allIn],
+            hands: ["2d 3s", "4d 5s", "6d 7s"],
+            board: "Ah Kh Qh Jh Th",
+            dealerIndex: -5
+        )
+
+        #expect(state.players.map(\.stack) == [1, 0, 2])
+        #expect(winnings(in: state) == ["p0": 1, "p2": 2])
+    }
+
+    private func settledState(
+        committed: [Int],
+        statuses: [PlayerStatus],
+        hands: [String],
+        board: String = "2c 3d 4s 9c Kd",
+        dealerIndex: Int = 0
+    ) -> GameState {
         var players = makePlayers(committed.map { _ in 0 })
-        for i in players.indices {
-            players[i].committed = committed[i]
-            players[i].status = statuses[i]
+        for index in players.indices {
+            players[index].committed = committed[index]
+            players[index].status = statuses[index]
+            players[index].holeCards = cards(hands[index])
         }
-        return GameState(handNumber: 1, players: players, dealerIndex: 0,
-                         smallBlind: 10, bigBlind: 20, board: [], deck: [], pot: 0,
-                         street: .river, currentToAct: nil, currentBet: 0, minRaise: 20,
-                         turnStartedAt: nil, turnDuration: 30, results: nil, version: 0)
+        var state = GameState(
+            tableID: "side-pot-test", handNumber: 1,
+            players: players, dealerIndex: dealerIndex, smallBlind: 10, bigBlind: 20,
+            board: cards(board), deck: [], street: .river, currentToAct: nil,
+            minRaise: 20, turnStartedAt: nil, turnDuration: 30,
+            results: nil, version: 0
+        )
+        state.advance(now: .distantPast)
+        return state
     }
 
-    @Test("unequal all-ins build a main pot and a side pot")
-    func mainAndSide() {
-        // A=100, B=50, C=100 committed; all contesting.
-        let s = stateWithCommitted([100, 50, 100], statuses: [.allIn, .allIn, .active])
-        let pots = s.buildSidePots()
-        #expect(pots.count == 2)
-        #expect(pots[0].amount == 150)            // 50 * 3
-        #expect(Set(pots[0].eligible) == [0, 1, 2])
-        #expect(pots[1].amount == 100)            // 50 * 2
-        #expect(Set(pots[1].eligible) == [0, 2])
-    }
-
-    @Test("all-in 300 vs 400: short stack capped, extra 100 is its own pot")
-    func cappedAllIn300vs400() {
-        // The 300 all-in can win at most 300 from the opponent; the opponent's
-        // extra 100 forms a side pot only they are eligible for.
-        let s = stateWithCommitted([300, 400], statuses: [.allIn, .allIn])
-        let pots = s.buildSidePots()
-        #expect(pots.count == 2)
-        #expect(pots[0].amount == 600)            // 300 matched by both
-        #expect(Set(pots[0].eligible) == [0, 1])
-        #expect(pots[1].amount == 100)            // uncalled remainder
-        #expect(pots[1].eligible == [1])          // only the 400 player
-    }
-
-    @Test("a folded contributor funds pots but cannot win them")
-    func foldedContributes() {
-        // B folded after committing 50.
-        let s = stateWithCommitted([100, 50, 100], statuses: [.allIn, .folded, .active])
-        let pots = s.buildSidePots()
-        #expect(pots[0].amount == 150)
-        #expect(Set(pots[0].eligible) == [0, 2])   // B excluded though chips counted
-    }
-
-    @Test("odd-chip seat order normalizes malformed dealer index")
-    func oddChipSeatOrderNormalizesMalformedDealerIndex() {
-        var s = stateWithCommitted([100, 100, 100], statuses: [.allIn, .allIn, .allIn])
-        s.dealerIndex = -5
-
-        #expect(s.seatOrder(2) == 0)
-        #expect(s.seatOrder(0) == 1)
-        #expect(s.seatOrder(1) == 2)
-    }
-
-    @Test("a short all-in player can only win the main pot")
-    func shortStackCappedWinnings() throws {
-        // Drive a real 3-way all-in and confirm the short stack never wins more
-        // than the main pot, and chips are conserved.
-        var s = GameState.startHand(players: makePlayers([100, 50, 200]),
-                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
-                                    seed: 5, handNumber: 1)
-        s.apply(.raise(to: 100), by: 0)   // A shoves 100
-        s.apply(.call, by: 1)             // B calls all-in for 50
-        s.apply(.call, by: 2)             // C calls 100
-        #expect(s.street == .showdown)
-        #expect(totalChips(s) == 350)
-        let results = try #require(s.results)
-        let bWon = try #require(results.first { $0.playerID == "p1" }).amountWon
-        #expect(bWon == 0 || bWon == 150)  // at most the main pot (50*3)
+    private func winnings(in state: GameState) -> [String: Int] {
+        Dictionary(uniqueKeysWithValues: (state.results ?? []).map {
+            ($0.playerID, $0.amountWon)
+        })
     }
 }
