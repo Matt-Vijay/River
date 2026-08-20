@@ -13,18 +13,14 @@ The repository also includes a standalone pass-and-play app for fast UI iteratio
 - `RiverUITests`: end-to-end standalone gameplay interactions.
 - `RiverMessagesInteractionTests`: end-to-end interactions hosted by the real Messages app.
 
-`project.yml` is the source of truth for the generated Xcode project.
-
 ## Requirements
 
 - Xcode 16 or newer
 - iOS 17 or newer
-- XcodeGen
 
-## Generate And Build
+## Build
 
 ```sh
-xcodegen generate
 xcodebuild \
   -project River.xcodeproj \
   -scheme RiverMessages \
