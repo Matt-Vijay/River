@@ -74,16 +74,13 @@ extension MessagesViewController {
 
             switch message {
             case .lobby(let lobby):
-                if lobbySeatIntent == lobby.tableID {
-                    if lobby.seat(id: hero) == nil, !lobby.isFull {
-                        send(
-                            .joinLobby(name: configuredProfile.name,
-                                       avatar: configuredProfile.avatar),
-                            on: message,
-                            conversation: conversation
-                        )
-                        return
-                    }
+                if lobbySeatIntent == lobby.tableID,
+                   lobby.seat(id: hero) == nil,
+                   !lobby.isFull {
+                    send(.joinLobby(name: configuredProfile.name,
+                                    avatar: configuredProfile.avatar),
+                         on: message, conversation: conversation)
+                    return
                 }
                 renderLobby(lobby, hero: hero, conversation: conversation)
             case .game(let state):
