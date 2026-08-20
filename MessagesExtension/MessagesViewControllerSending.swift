@@ -10,7 +10,6 @@ extension MessagesViewController {
             showStale(message)
             return
         }
-        if case .leaveLobby = kind { lobbySeatIntent = nil }
         commit(
             kind,
             on: message,

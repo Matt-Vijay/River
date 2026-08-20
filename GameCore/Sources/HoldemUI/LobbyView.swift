@@ -4,8 +4,6 @@ import GameCore
 /// Pre-game lobby. Character and handle setup happen before this screen via the
 /// locally saved profile.
 public struct LobbyView: View {
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
-
     private let lobby: Lobby
     private let localID: String
     private let onOperation: (TableOperation) -> Void
@@ -25,24 +23,12 @@ public struct LobbyView: View {
     }
 
     public var body: some View {
-        Group {
-            if verticalSizeClass == .compact {
-                ScrollView {
-                    VStack(spacing: 18) {
-                        lobbyContent
-                        lobbyActions
-                    }
+        ScrollView { lobbyContent }
+            .safeAreaInset(edge: .bottom) {
+                lobbyActions
                     .padding(.bottom, 18)
-                }
-            } else {
-                ScrollView { lobbyContent }
-                    .safeAreaInset(edge: .bottom) {
-                        lobbyActions
-                            .padding(.bottom, 18)
-                            .background(Theme.background)
-                    }
+                    .background(Theme.background)
             }
-        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background.ignoresSafeArea())
     }
