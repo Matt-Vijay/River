@@ -169,10 +169,7 @@ enum HandEvaluator {
         }
 
         func kickers(excluding first: Int, and second: Int? = nil) -> [Int] {
-            if let second {
-                return ranksDescending.filter { $0 != first && $0 != second }
-            }
-            return ranksDescending.filter { $0 != first }
+            ranksDescending.filter { $0 != first && $0 != second }
         }
     }
 
