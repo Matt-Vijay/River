@@ -317,8 +317,7 @@ extension GameState {
 
     private func showdownResults(ranks: [Int: HandRank], winnings: [String: Int]) -> [HandResult] {
         players.indices.compactMap { index in
-            guard players[index].isContesting,
-                  let amount = winnings[players[index].id],
+            guard let amount = winnings[players[index].id],
                   amount > 0 else { return nil }
             return HandResult(
                 playerID: players[index].id,
