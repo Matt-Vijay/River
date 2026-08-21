@@ -24,7 +24,6 @@
 		D8AD9C63495905DA41648727 /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7FACAA3B8E27F93AD7658CAA /* GameCore */; };
 		E6633CC7F6C607760E64A479 /* LatestRevisionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D8DE420C2F111DEB1634EA /* LatestRevisionStore.swift */; };
 		EB90F9E515C2B7828B23211B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */; };
-		FD72318788A853FC134002E5 /* AppAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AE0116DCB9F5F29F058ADC74 /* AppAssets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,13 +40,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = B2E1D6A52DCBF4B2CF8BF3B2;
 			remoteInfo = RiverMessagesExtension;
-		};
-		DA136C077AF226D04709306D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1111CDE7BEEF717E1E0BB5C9 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = D7CE16DF1CF27F10F182730A;
-			remoteInfo = RiverMessages;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -74,7 +66,6 @@
 		66740829813F1A24104DDE23 /* RiverUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RiverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		737FA785448C1F7BC37B6CF8 /* RiverInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiverInteractionTests.swift; sourceTree = "<group>"; };
 		7D71E7B258442C2C7D2DB2ED /* MessagesViewControllerRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerRendering.swift; sourceTree = "<group>"; };
-		840379BB6BA1B6D862CBA5CD /* RiverMessagesInteractionTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RiverMessagesInteractionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A9B43F30997B303DA4CB0D58 /* MessagePayloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePayloads.swift; sourceTree = "<group>"; };
 		AE0116DCB9F5F29F058ADC74 /* AppAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppAssets.xcassets; sourceTree = "<group>"; };
@@ -84,7 +75,6 @@
 		C8E36482A6171C4542C4D42C /* River.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = River.swift; sourceTree = "<group>"; };
 		DA7DAE6A66ADA8D76B308241 /* GameCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GameCore; path = GameCore; sourceTree = SOURCE_ROOT; };
 		DC9249E04D36458E88050E1E /* MessagesViewControllerSending.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerSending.swift; sourceTree = "<group>"; };
-		F3BF93C594E08ED938ACFF6C /* RiverMessages.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RiverMessages.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,14 +120,6 @@
 			path = MessagesExtension;
 			sourceTree = "<group>";
 		};
-		6BA401661F6C16A4F608226D /* RiverMessagesInteractionTests */ = {
-			isa = PBXGroup;
-			children = (
-				AED947E923C39338587A05B7 /* RiverMessagesInteractionTests.swift */,
-			);
-			path = RiverMessagesInteractionTests;
-			sourceTree = "<group>";
-		};
 		B08359D185E9211107825A42 = {
 			isa = PBXGroup;
 			children = (
@@ -147,7 +129,6 @@
 				EF49B1232E3ECD42395ADBDE /* MessagesExtensionAssets */,
 				E19228AC31A764FDECF620EB /* Packages */,
 				12FE704C57F230F115B91FBF /* River */,
-				6BA401661F6C16A4F608226D /* RiverMessagesInteractionTests */,
 				FF21A777F3118C9106E39675 /* RiverUITests */,
 				D8A528121E22538390D4F030 /* Products */,
 			);
@@ -157,9 +138,7 @@
 			isa = PBXGroup;
 			children = (
 				30861353134FF039E6227447 /* River.app */,
-				F3BF93C594E08ED938ACFF6C /* RiverMessages.app */,
 				085B91E4FFF58BA61EFDEE64 /* RiverMessagesExtension.appex */,
-				840379BB6BA1B6D862CBA5CD /* RiverMessagesInteractionTests.xctest */,
 				66740829813F1A24104DDE23 /* RiverUITests.xctest */,
 			);
 			name = Products;
@@ -185,6 +164,7 @@
 			isa = PBXGroup;
 			children = (
 				737FA785448C1F7BC37B6CF8 /* RiverInteractionTests.swift */,
+				AED947E923C39338587A05B7 /* RiverMessagesInteractionTests.swift */,
 			);
 			path = RiverUITests;
 			sourceTree = "<group>";
@@ -217,10 +197,12 @@
 				6A1DAC42A6D5112D135ECCB8 /* Sources */,
 				7C33328FE12B5EF9C01739A9 /* Resources */,
 				DF30D951D13B06783751D9CF /* Frameworks */,
+				092E899B3A5D0B80133772A3 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				771CC25E7585DF4FD60F593F /* PBXTargetDependency */,
 			);
 			name = River;
 			packageProductDependencies = (
@@ -229,24 +211,6 @@
 			productName = River;
 			productReference = 30861353134FF039E6227447 /* River.app */;
 			productType = "com.apple.product-type.application";
-		};
-		5B55FBB87F45D10B7D4C52B7 /* RiverMessagesInteractionTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 7F5C5F0BDD5A05CDAC2A1B18 /* Build configuration list for PBXNativeTarget "RiverMessagesInteractionTests" */;
-			buildPhases = (
-				70684936198A7FD99488D733 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				ADA6362599CE6A1D23BBF037 /* PBXTargetDependency */,
-			);
-			name = RiverMessagesInteractionTests;
-			packageProductDependencies = (
-			);
-			productName = RiverMessagesInteractionTests;
-			productReference = 840379BB6BA1B6D862CBA5CD /* RiverMessagesInteractionTests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		B2E1D6A52DCBF4B2CF8BF3B2 /* RiverMessagesExtension */ = {
 			isa = PBXNativeTarget;
@@ -269,25 +233,6 @@
 			productReference = 085B91E4FFF58BA61EFDEE64 /* RiverMessagesExtension.appex */;
 			productType = "com.apple.product-type.app-extension.messages";
 		};
-		D7CE16DF1CF27F10F182730A /* RiverMessages */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = AA55340365CE5F34B3603D74 /* Build configuration list for PBXNativeTarget "RiverMessages" */;
-			buildPhases = (
-				905AECB4235573B581AB95B0 /* Resources */,
-				092E899B3A5D0B80133772A3 /* Embed Foundation Extensions */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				771CC25E7585DF4FD60F593F /* PBXTargetDependency */,
-			);
-			name = RiverMessages;
-			packageProductDependencies = (
-			);
-			productName = RiverMessages;
-			productReference = F3BF93C594E08ED938ACFF6C /* RiverMessages.app */;
-			productType = "com.apple.product-type.application.messages";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -299,9 +244,6 @@
 				TargetAttributes = {
 					10AF8A55EB905652D7EE2853 = {
 						TestTargetID = 2E5547EBF3C62BD425B1B3E0;
-					};
-					5B55FBB87F45D10B7D4C52B7 = {
-						TestTargetID = D7CE16DF1CF27F10F182730A;
 					};
 				};
 			};
@@ -323,9 +265,7 @@
 			projectRoot = "";
 			targets = (
 				2E5547EBF3C62BD425B1B3E0 /* River */,
-				D7CE16DF1CF27F10F182730A /* RiverMessages */,
 				B2E1D6A52DCBF4B2CF8BF3B2 /* RiverMessagesExtension */,
-				5B55FBB87F45D10B7D4C52B7 /* RiverMessagesInteractionTests */,
 				10AF8A55EB905652D7EE2853 /* RiverUITests */,
 			);
 		};
@@ -350,14 +290,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		905AECB4235573B581AB95B0 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				FD72318788A853FC134002E5 /* AppAssets.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -369,19 +301,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		70684936198A7FD99488D733 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				025AED77D04D7F80B9824D96 /* RiverMessagesInteractionTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		87F29295965047356ED212AC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				9E04C295B6B2C00E2BFE5B9B /* RiverInteractionTests.swift in Sources */,
+				025AED77D04D7F80B9824D96 /* RiverMessagesInteractionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -411,11 +336,6 @@
 			target = B2E1D6A52DCBF4B2CF8BF3B2 /* RiverMessagesExtension */;
 			targetProxy = CF8AA2546096020DA66DDA0A /* PBXContainerItemProxy */;
 		};
-		ADA6362599CE6A1D23BBF037 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = D7CE16DF1CF27F10F182730A /* RiverMessages */;
-			targetProxy = DA136C077AF226D04709306D /* PBXContainerItemProxy */;
-		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -435,29 +355,11 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.standalone;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		6828A6D60E5D82D3368094F7 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = River;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
-			name = Release;
+			name = Debug;
 		};
 		778B5E3D08343B579F01BE34 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -538,27 +440,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.standalone;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
-		9BF3A2927A5EB122B61A3A53 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGNING_ALLOWED = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.uitests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = RiverMessages;
 			};
 			name = Release;
 		};
@@ -573,7 +457,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.standalone.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.uitests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = River;
@@ -636,42 +520,6 @@
 			};
 			name = Release;
 		};
-		C3251A9E0262C81A36AFFC2E /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = River;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		C3C61011EDD8571AC0A60269 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGNING_ALLOWED = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.uitests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = RiverMessages;
-			};
-			name = Debug;
-		};
 		D64C27805EC4F7D28691E642 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -683,7 +531,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.standalone.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dewylabs.river.uitests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = River;
@@ -754,24 +602,6 @@
 			buildConfigurations = (
 				52409E7B192654B307C71088 /* Debug */,
 				78F2ACC1F6952E935DFD337D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		7F5C5F0BDD5A05CDAC2A1B18 /* Build configuration list for PBXNativeTarget "RiverMessagesInteractionTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				C3C61011EDD8571AC0A60269 /* Debug */,
-				9BF3A2927A5EB122B61A3A53 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		AA55340365CE5F34B3603D74 /* Build configuration list for PBXNativeTarget "RiverMessages" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				C3251A9E0262C81A36AFFC2E /* Debug */,
-				6828A6D60E5D82D3368094F7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

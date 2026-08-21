@@ -66,7 +66,7 @@ private struct PieShape: Shape {
             center: center,
             radius: radius,
             startAngle: .degrees(-90),
-            endAngle: .degrees(-90 + 360 * min(1, fraction)),
+            endAngle: .degrees(-90 + 360 * fraction),
             clockwise: false
         )
         path.closeSubpath()
