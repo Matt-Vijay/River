@@ -25,7 +25,9 @@ final class LatestRevisionStore {
         }
         revisions.append(revision)
         revisions = Array(revisions.suffix(Self.limit))
-        save(revisions)
+        if let data = try? JSONEncoder().encode(revisions) {
+            defaults.set(data, forKey: key)
+        }
         return true
     }
 
@@ -44,10 +46,5 @@ final class LatestRevisionStore {
             normalized.append(revision)
         }
         return Array(normalized.suffix(Self.limit))
-    }
-
-    private func save(_ revisions: [TableRevision]) {
-        guard let data = try? JSONEncoder().encode(revisions) else { return }
-        defaults.set(data, forKey: key)
     }
 }

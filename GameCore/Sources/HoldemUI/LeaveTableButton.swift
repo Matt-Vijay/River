@@ -21,15 +21,14 @@ struct LeaveTableButton: View {
         .buttonStyle(PressableButtonStyle())
         .accessibilityLabel("Leave table")
         .accessibilityIdentifier(accessibilityID)
-        .confirmationDialog(
+        .alert(
             "Leave this table?",
-            isPresented: $isConfirmingLeave,
-            titleVisibility: .visible
+            isPresented: $isConfirmingLeave
         ) {
-            Button("Leave table", role: .destructive, action: action)
-                .accessibilityIdentifier(confirmAccessibilityID)
             Button("Stay", role: .cancel) {}
                 .accessibilityIdentifier(cancelAccessibilityID)
+            Button("Leave table", role: .destructive, action: action)
+                .accessibilityIdentifier(confirmAccessibilityID)
         } message: {
             Text(consequence)
         }

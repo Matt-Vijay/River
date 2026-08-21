@@ -36,6 +36,9 @@ final class MessagesViewController: MSMessagesAppViewController {
     override func willBecomeActive(with conversation: MSConversation) {
         super.willBecomeActive(with: conversation)
         observeActiveConversation(conversation)
+        if let selectedMessage = conversation.selectedMessage {
+            captureSelection(selectedMessage)
+        }
     }
 
     override func didBecomeActive(with conversation: MSConversation) {
@@ -60,13 +63,7 @@ final class MessagesViewController: MSMessagesAppViewController {
         // `selectedMessage` can still be nil while this callback is running.
         // Render the message Messages actually handed us instead of racing the
         // conversation property and falling back to the new-table screen.
-        sourceMessageOverride = message
-        let selected = MessagePayloads.tableMessage(from: message)
-        if case .message(.lobby(let lobby)) = selected {
-            lobbySeatIntent = lobby.tableID
-        } else {
-            lobbySeatIntent = nil
-        }
+        let selected = captureSelection(message)
         if case .message = selected, presentationStyle == .compact {
             requestPresentationStyle(.expanded)
         }
@@ -87,6 +84,18 @@ final class MessagesViewController: MSMessagesAppViewController {
     func dismissCurrentSurface() {
         rootHost.resumeAutomaticRendering()
         dismiss()
+    }
+
+    @discardableResult
+    private func captureSelection(_ message: MSMessage) -> SelectedTableMessage {
+        sourceMessageOverride = message
+        let selected = MessagePayloads.tableMessage(from: message)
+        if case .message(.lobby(let lobby)) = selected {
+            lobbySeatIntent = lobby.tableID
+        } else {
+            lobbySeatIntent = nil
+        }
+        return selected
     }
 
     private func observeActiveConversation(_ conversation: MSConversation) {

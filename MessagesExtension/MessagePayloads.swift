@@ -15,13 +15,15 @@ enum MessagePayloads {
     private static let transportPath = ",river"
 
     static func tableMessage(from message: MSMessage?) -> SelectedTableMessage {
-        guard let url = message?.url else { return .none }
-        let isCurrentTransport = url.scheme == transportScheme && url.path == transportPath
-        let isLegacyTransport = url.scheme == "holdem" && url.host == "table"
-        guard isCurrentTransport || isLegacyTransport else { return .none }
-        guard let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else {
-            return .invalidPayload
+        guard let url = message?.url,
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return .none
         }
+        let isCurrentTransport = components.scheme == transportScheme
+            && components.path == transportPath
+        let isLegacyTransport = components.scheme == "holdem" && components.host == "table"
+        guard isCurrentTransport || isLegacyTransport else { return .none }
+        guard let items = components.queryItems else { return .invalidPayload }
         let payloads = items.filter { $0.name == payloadKey }
         guard payloads.count == 1, let payload = payloads[0].value else {
             return .invalidPayload

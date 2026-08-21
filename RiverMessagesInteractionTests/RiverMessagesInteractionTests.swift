@@ -29,19 +29,53 @@ final class RiverMessagesInteractionTests: XCTestCase {
         let lobbyBubbles = transcript.links.matching(lobbyPredicate)
 
         if !lobbyBubbles.firstMatch.waitForExistence(timeout: 3) {
-            // Fake simulator conversations can stage a successful send in the host
-            // composer. Finish that host-only step without weakening River's one-tap flow.
-            let composer = messages.otherElements["MessageEntryView"]
-            let stagedTable = composer.descendants(matching: .link)
-                .matching(lobbyPredicate)
-                .firstMatch
-            XCTAssertTrue(stagedTable.waitForExistence(timeout: 2))
-
-            let hostSend = composer.buttons["sendButton"]
-            XCTAssertTrue(hostSend.isEnabled)
-            hostSend.tap()
+            sendStagedTableIfPresent(matching: lobbyPredicate)
         }
         XCTAssertTrue(lobbyBubbles.firstMatch.waitForExistence(timeout: 8))
+        let lobbyBubble = lobbyBubbles.allElementsBoundByIndex.last ?? lobbyBubbles.firstMatch
+        lobbyBubble.tap()
+
+        let startGame = messages.buttons["lobby.startGame"]
+        XCTAssertTrue(startGame.waitForExistence(timeout: 5))
+        XCTAssertFalse(startGame.isEnabled)
+        let leave = messages.buttons["lobby.leave"]
+        XCTAssertTrue(leave.exists)
+        XCTAssertFalse(messages.buttons["lobby.addPlayer"].exists)
+
+        leave.tap()
+        let cancelLeave = messages.buttons
+            .matching(identifier: "lobby.leave.cancel")
+            .firstMatch
+        XCTAssertTrue(cancelLeave.waitForExistence(timeout: 2))
+        XCTAssertTrue(messages.buttons["lobby.leave.confirm"].exists)
+        cancelLeave.tap()
+        XCTAssertTrue(cancelLeave.waitForNonExistence(timeout: 2))
+
+        leave.tap()
+        let confirmLeave = messages.buttons
+            .matching(identifier: "lobby.leave.confirm")
+            .firstMatch
+        XCTAssertTrue(confirmLeave.waitForExistence(timeout: 2))
+        confirmLeave.tap()
+        XCTAssertTrue(startGame.waitForNonExistence(timeout: 5),
+                      "Leaving must send the updated table and close the extension.")
+
+        let emptyLobbyPredicate = NSPredicate(
+            format: "label CONTAINS %@ AND label CONTAINS %@",
+            "0/6 seated",
+            "Open table"
+        )
+        sendStagedTableIfPresent(matching: emptyLobbyPredicate)
+        let emptyLobbyBubbles = transcript.links.matching(emptyLobbyPredicate)
+        XCTAssertTrue(emptyLobbyBubbles.firstMatch.waitForExistence(timeout: 8))
+        let emptyLobby = emptyLobbyBubbles.allElementsBoundByIndex.last
+            ?? emptyLobbyBubbles.firstMatch
+        emptyLobby.tap()
+
+        XCTAssertTrue(startGame.waitForExistence(timeout: 5))
+        XCTAssertFalse(startGame.isEnabled)
+        XCTAssertTrue(leave.waitForExistence(timeout: 5),
+                      "Selecting a table must automatically seat the local participant.")
     }
 
     private func openFirstConversation() {
@@ -51,6 +85,18 @@ final class RiverMessagesInteractionTests: XCTestCase {
         XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 3))
         rows.firstMatch.tap()
         XCTAssertTrue(messages.textFields["messageBodyField"].waitForExistence(timeout: 3))
+    }
+
+    private func sendStagedTableIfPresent(matching predicate: NSPredicate) {
+        let composer = messages.otherElements["MessageEntryView"]
+        let stagedTable = composer.descendants(matching: .link)
+            .matching(predicate)
+            .firstMatch
+        guard stagedTable.waitForExistence(timeout: 2) else { return }
+
+        let hostSend = composer.buttons["sendButton"]
+        XCTAssertTrue(hostSend.isEnabled)
+        hostSend.tap()
     }
 
     private func openRiver() {
