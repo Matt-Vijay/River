@@ -56,7 +56,6 @@ public struct LobbyView: View {
         .padding(.top, 18)
     }
 
-    @ViewBuilder
     private var lobbyActions: some View {
         VStack(spacing: 12) {
             PrimaryActionButton(

@@ -189,7 +189,7 @@ public struct GameOverView: View {
 }
 
 public struct StaleTableView: View {
-  public enum Context: Equatable {
+  public enum Context {
     case olderMessage
     case rejectedAction(TableOperationRejection)
     case invalidPayload

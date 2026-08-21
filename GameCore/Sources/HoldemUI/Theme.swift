@@ -9,7 +9,6 @@ enum Theme {
     static let red = Color(red: 0.95, green: 0.26, blue: 0.21)
     static let ink = Color(white: 0.07)
     static let chip = Color(red: 0.98, green: 0.78, blue: 0.18)
-    static let chipBackground = Color(white: 0.12)
     static let accent = Color(red: 0.22, green: 0.85, blue: 0.5)
     static let warn = Color(red: 0.96, green: 0.6, blue: 0.2)
     static let secondaryText = Color(white: 0.55)

@@ -280,6 +280,6 @@ struct BetChip: View {
             .foregroundStyle(Theme.chip)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(Capsule().fill(Theme.chipBackground))
+            .background(Capsule().fill(Theme.controlBackground))
     }
 }

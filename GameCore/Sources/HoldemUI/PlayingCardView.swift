@@ -30,7 +30,6 @@ struct PlayingCardView: View {
     /// Dimmed at showdown when the card isn't part of a winning hand.
     var dimmed: Bool = false
 
-    @ViewBuilder
     var body: some View {
         if let card {
             CardSurface(width: width, height: height) {
