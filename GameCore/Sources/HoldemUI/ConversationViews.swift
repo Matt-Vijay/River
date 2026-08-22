@@ -9,26 +9,21 @@ public struct ConversationNewTableView: View {
   }
 
   public var body: some View {
-    Button(action: onSend) {
-      VStack(spacing: 14) {
-        PokerChipMark(size: 56)
-        Text("Texas Hold’em")
-          .font(.title3.weight(.semibold))
-          .foregroundStyle(.white)
-        Label("Send table", systemImage: "paperplane.fill")
-          .font(.subheadline.weight(.semibold))
-          .foregroundStyle(Theme.secondaryText)
-      }
-      .frame(maxWidth: .infinity, minHeight: 190)
-      .controlSurface()
-      .contentShape(RoundedRectangle(cornerRadius: Theme.Metrics.controlCorner))
+    VStack(spacing: 16) {
+      PokerChipMark(size: 48)
+      Text("Texas Hold’em")
+        .font(.title3.weight(.semibold))
+        .foregroundStyle(.white)
+      PrimaryActionButton(
+        title: "Send table",
+        systemImage: "paperplane.fill",
+        accessibilityID: HoldemAccessibility.Conversation.sendTable,
+        action: onSend
+      )
     }
-    .buttonStyle(PressableButtonStyle())
-    .padding(20)
+    .padding(24)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Theme.background)
-    .accessibilityLabel("Send Texas Hold’em table")
-    .accessibilityIdentifier(HoldemAccessibility.Conversation.sendTable)
   }
 }
 

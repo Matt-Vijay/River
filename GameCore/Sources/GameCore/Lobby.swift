@@ -27,13 +27,6 @@ public struct LobbySeat: Codable, Sendable, Identifiable, Equatable {
             container.decode(String.self, forKey: .avatar),
             codingPath: container.codingPath + [CodingKeys.avatar])
     }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(name, forKey: .name)
-        try container.encode(avatar, forKey: .avatar)
-    }
 }
 
 /// The lobby players see before the first hand. It tracks only table seats;
