@@ -15,14 +15,13 @@
 		75A869FDFF2BFC6971D22B7B /* RiverMessagesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085B91E4FFF58BA61EFDEE64 /* RiverMessagesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7F927A41658A91A88B5E14B5 /* HoldemUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9A9B1385AA5890261DE20000 /* HoldemUI */; };
 		804CBE22DD0975E0774D760B /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C507BC82673645D240CD6799 /* MessagesViewController.swift */; };
-		930DF8FB35E80E76C9D5590F /* MessagePayloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B43F30997B303DA4CB0D58 /* MessagePayloads.swift */; };
+		930DF8FB35E80E76C9D5590F /* MessageTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B43F30997B303DA4CB0D58 /* MessageTransport.swift */; };
 		9E04C295B6B2C00E2BFE5B9B /* RiverInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 737FA785448C1F7BC37B6CF8 /* RiverInteractionTests.swift */; };
 		AB31F238D964842DB3136435 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */; };
 		B526A93AA1F6EB84E42D239A /* MessagesViewControllerRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D71E7B258442C2C7D2DB2ED /* MessagesViewControllerRendering.swift */; };
 		C3C35F44CBB81814977B374E /* HoldemUI in Frameworks */ = {isa = PBXBuildFile; productRef = F2E22C9344DFACA2A3B5553D /* HoldemUI */; };
 		C5D6BA3B73DD9323B661BED4 /* SwiftUIRootHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0D09EE991B5B8488836390 /* SwiftUIRootHost.swift */; };
 		D8AD9C63495905DA41648727 /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7FACAA3B8E27F93AD7658CAA /* GameCore */; };
-		E6633CC7F6C607760E64A479 /* LatestRevisionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D8DE420C2F111DEB1634EA /* LatestRevisionStore.swift */; };
 		EB90F9E515C2B7828B23211B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -61,13 +60,12 @@
 		085B91E4FFF58BA61EFDEE64 /* RiverMessagesExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RiverMessagesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		30861353134FF039E6227447 /* River.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = River.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3E0D09EE991B5B8488836390 /* SwiftUIRootHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIRootHost.swift; sourceTree = "<group>"; };
-		45D8DE420C2F111DEB1634EA /* LatestRevisionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatestRevisionStore.swift; sourceTree = "<group>"; };
 		47CAACB0218D10193B71E2E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		66740829813F1A24104DDE23 /* RiverUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RiverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		737FA785448C1F7BC37B6CF8 /* RiverInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiverInteractionTests.swift; sourceTree = "<group>"; };
 		7D71E7B258442C2C7D2DB2ED /* MessagesViewControllerRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewControllerRendering.swift; sourceTree = "<group>"; };
 		A3DEF0685D23D5E90417A041 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		A9B43F30997B303DA4CB0D58 /* MessagePayloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePayloads.swift; sourceTree = "<group>"; };
+		A9B43F30997B303DA4CB0D58 /* MessageTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageTransport.swift; sourceTree = "<group>"; };
 		AE0116DCB9F5F29F058ADC74 /* AppAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppAssets.xcassets; sourceTree = "<group>"; };
 		AED947E923C39338587A05B7 /* RiverMessagesInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiverMessagesInteractionTests.swift; sourceTree = "<group>"; };
 		B471DBFC1F65FA2AF642A464 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -110,8 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				B471DBFC1F65FA2AF642A464 /* Info.plist */,
-				45D8DE420C2F111DEB1634EA /* LatestRevisionStore.swift */,
-				A9B43F30997B303DA4CB0D58 /* MessagePayloads.swift */,
+				A9B43F30997B303DA4CB0D58 /* MessageTransport.swift */,
 				C507BC82673645D240CD6799 /* MessagesViewController.swift */,
 				7D71E7B258442C2C7D2DB2ED /* MessagesViewControllerRendering.swift */,
 				DC9249E04D36458E88050E1E /* MessagesViewControllerSending.swift */,
@@ -314,8 +311,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E6633CC7F6C607760E64A479 /* LatestRevisionStore.swift in Sources */,
-				930DF8FB35E80E76C9D5590F /* MessagePayloads.swift in Sources */,
+				930DF8FB35E80E76C9D5590F /* MessageTransport.swift in Sources */,
 				804CBE22DD0975E0774D760B /* MessagesViewController.swift in Sources */,
 				B526A93AA1F6EB84E42D239A /* MessagesViewControllerRendering.swift in Sources */,
 				74D797A4417460109BF9AF24 /* MessagesViewControllerSending.swift in Sources */,
