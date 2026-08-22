@@ -49,12 +49,13 @@ private struct PlayerSeatView: View {
         VStack(spacing: 4) {
             marker.frame(height: usesAccessibleLayout ? 38 : 18)
 
-            avatar
+            avatar.opacity(player.status == .folded ? 0.4 : 1)
 
             Text(player.name)
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
-                .lineLimit(usesAccessibleLayout ? 2 : 1)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
                 .truncationMode(.tail)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -77,9 +78,9 @@ private struct PlayerSeatView: View {
             cardReveal
                 .frame(height: 37)
                 .padding(.top, 2)
+                .opacity(player.status == .folded ? 0.4 : 1)
         }
-        .frame(width: usesAccessibleLayout ? 140 : 66)
-        .opacity(player.status == .folded ? 0.4 : 1)
+        .frame(width: usesAccessibleLayout ? 140 : 76)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
         .turnClockAccessibilityValue(

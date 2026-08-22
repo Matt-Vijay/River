@@ -42,8 +42,8 @@ extension MessagesViewController {
         guard let displayed = displayedSourceMessage(in: conversation) else { return true }
         if let currentRevision = MessagePayloads.revision(from: displayed) {
             guard let incomingRevision = MessagePayloads.revision(from: message) else { return false }
-            return incomingRevision.tableID != currentRevision.tableID
-                || incomingRevision.isSameOrNewer(than: currentRevision)
+            return incomingRevision.tableID == currentRevision.tableID
+                && incomingRevision.isSameOrNewer(than: currentRevision)
         }
         return message.session != nil && message.session == displayed.session
     }
@@ -52,7 +52,7 @@ extension MessagesViewController {
                         profile configuredProfile: PlayerProfile,
                         conversation: MSConversation) {
         let hero = heroID(conversation)
-        let selectedLobbyID = lobbySeatIntent
+        let intendedLobbyID = lobbySeatIntent
         lobbySeatIntent = nil
         switch selectedMessage {
         case .none:
@@ -76,13 +76,18 @@ extension MessagesViewController {
 
             switch message {
             case .lobby(let lobby):
-                if selectedLobbyID == lobby.tableID,
-                   lobby.seat(id: hero) == nil,
-                   !lobby.isFull {
-                    send(.joinLobby(name: configuredProfile.name,
-                                    avatar: configuredProfile.avatar),
-                         on: message, conversation: conversation)
-                    return
+                if intendedLobbyID == lobby.tableID {
+                    if lobby.seat(id: hero) == nil, !lobby.isFull {
+                        lobbySeatIntent = lobby.tableID
+                        if activeSend == nil {
+                            send(.joinLobby(name: configuredProfile.name,
+                                            avatar: configuredProfile.avatar),
+                                 on: message, conversation: conversation)
+                            return
+                        }
+                    } else if isOptimistic {
+                        lobbySeatIntent = lobby.tableID
+                    }
                 }
                 renderLobby(lobby, hero: hero, conversation: conversation)
             case .game(let state):

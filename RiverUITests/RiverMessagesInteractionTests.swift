@@ -85,6 +85,10 @@ final class RiverMessagesInteractionTests: XCTestCase {
         XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 3))
         rows.firstMatch.tap()
         XCTAssertTrue(messages.textFields["messageBodyField"].waitForExistence(timeout: 3))
+        let stagedMessage = messages.buttons["Remove app from message"]
+        if stagedMessage.waitForExistence(timeout: 1) {
+            stagedMessage.tap()
+        }
     }
 
     private func sendStagedTableIfPresent(matching predicate: NSPredicate) {

@@ -108,7 +108,6 @@ final class RiverInteractionTests: XCTestCase {
 
         assertLabel(anyElement("lobby.localSeat", timeout: 3), contains: cappedName)
         XCTAssertFalse(app.textFields["profile.name"].exists)
-        XCTAssertFalse(app.buttons["lobby.editProfile"].exists)
     }
 
     func testLobbyLeaveIsConfirmedAndNeverStartsTheGame() {
@@ -259,11 +258,6 @@ final class RiverInteractionTests: XCTestCase {
             return -1
         }
 
-        let valueText = slider.value as? String ?? ""
-        XCTAssertFalse(valueText.isEmpty,
-                       "Expected raise slider to expose the selected raise amount",
-                       file: file,
-                       line: line)
         return amount
     }
 

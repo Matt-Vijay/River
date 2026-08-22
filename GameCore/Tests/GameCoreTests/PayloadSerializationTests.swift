@@ -205,17 +205,24 @@ struct PayloadSerializationTests {
         }
     }
 
-    @Test("decoded live games reject a wire pot that disagrees with committed chips")
-    func decodedLiveGameRejectsMismatchedPot() throws {
-        let state = sixPlayerState()
-        var object = try #require(
-            JSONSerialization.jsonObject(with: GamePayload.encoder.encode(state)) as? [String: Any]
-        )
-        object["pot"] = 1
-        let data = try JSONSerialization.data(withJSONObject: object)
+    @Test("decoded games reject invalid wire pots")
+    func decodedGamesRejectInvalidWirePots() throws {
+        for (state, pot) in [
+            (sixPlayerState(), -1),
+            (sixPlayerState(), 1),
+            (completedSixPlayerState(), 1),
+        ] {
+            var object = try #require(
+                JSONSerialization.jsonObject(
+                    with: GamePayload.encoder.encode(state)
+                ) as? [String: Any]
+            )
+            object["pot"] = pot
+            let data = try JSONSerialization.data(withJSONObject: object)
 
-        #expect(throws: DecodingError.self) {
-            _ = try GamePayload.decoder.decode(GameState.self, from: data)
+            #expect(throws: DecodingError.self) {
+                _ = try GamePayload.decoder.decode(GameState.self, from: data)
+            }
         }
     }
 

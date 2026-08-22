@@ -81,8 +81,8 @@ extension MessagesViewController {
             dismissAfterSend: dismissAfterSend
         )
         activeSend = send
-        rootHost.setInteractionEnabled(false)
         render(conversation: conversation)
+        rootHost.setInteractionEnabled(false)
         scheduleTimeout(for: send.id)
 
         conversation.send(outgoingMessage) { [weak self] error in
@@ -94,6 +94,7 @@ extension MessagesViewController {
 
     func acknowledgeActiveSend(with message: MSMessage) -> Bool {
         guard let send = activeSend,
+              message.session == send.outgoingMessage.session,
               MessagePayloads.revision(from: message) == send.sentRevision else { return false }
         finishSend(id: send.id, error: nil)
         return true

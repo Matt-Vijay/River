@@ -68,7 +68,7 @@ struct PayloadDurabilityTests {
     @Test("payloads reject unrecoverable poker state")
     func payloadsRejectUnrecoverablePokerState() throws {
         let rejectedPayloads = try [
-            corrupted { $0.deck = [] },
+            corrupted { $0.deck = Array($0.deck.prefix(5)) },
             corrupted { state in
                 state.deck.append(try #require(state.deck.first))
             },

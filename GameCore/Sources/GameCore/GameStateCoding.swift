@@ -31,10 +31,10 @@ extension GameState {
         }
         let wirePot = try container.decode(Int.self, forKey: .pot)
         let cards = players.flatMap(\.holeCards) + board + deck
-        guard Set(cards).count == cards.count else {
+        guard cards.count == 52, Set(cards).count == cards.count else {
             throw DecodingError.dataCorrupted(.init(
                 codingPath: container.codingPath,
-                debugDescription: "Visible and undealt cards must be unique"
+                debugDescription: "A game must contain 52 unique cards"
             ))
         }
         let results = try container.decodeIfPresent([HandResult].self, forKey: .results)
@@ -119,6 +119,7 @@ private extension GameState {
             guard street == .showdown,
                   currentToAct == nil,
                   turnStartedAt == nil,
+                  wirePot == 0,
                   players.allSatisfy({ $0.bet == 0 && $0.lastActionBet == nil }) else {
                 throw corrupted("Completed hand contains live betting state", codingPath: codingPath)
             }
@@ -218,7 +219,8 @@ private extension GameState {
         let totalBets = try checkedSum(players.map(\.bet), codingPath: codingPath)
         let totalCommitted = try checkedSum(players.map(\.committed), codingPath: codingPath)
         guard totalCommitted >= totalBets,
-              TableRules.table(wirePot) == totalCommitted - totalBets else {
+              (0...TableRules.tableMaximum).contains(wirePot),
+              wirePot == totalCommitted - totalBets else {
             throw corrupted("Committed chips do not match the pot", codingPath: codingPath)
         }
 

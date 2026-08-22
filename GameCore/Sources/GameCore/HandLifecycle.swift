@@ -262,7 +262,12 @@ extension GameState {
         var previous = 0
         for level in levels {
             let contributors = players.indices.filter { players[$0].committed >= level }
-            let amount = (level - previous) * contributors.count
+            let product = (level - previous).multipliedReportingOverflow(
+                by: contributors.count
+            )
+            let amount = product.overflow
+                ? TableRules.tableMaximum
+                : TableRules.table(product.partialValue)
             let eligible = contributors.filter { players[$0].isContesting }
             let winners = winners(among: eligible, ranks: ranks)
             for (seat, award) in split(amount, among: winners ?? contributors) {
