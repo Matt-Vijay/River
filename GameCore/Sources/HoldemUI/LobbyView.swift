@@ -82,7 +82,7 @@ public struct LobbyView: View {
                 .accessibilityIdentifier(HoldemAccessibility.Lobby.addPlayer)
             }
 
-            if isSeated {
+            if isSeated, onAddPlayer == nil {
                 LeaveTableButton(
                     consequence: "You will give up your seat in the lobby.",
                     style: .text,

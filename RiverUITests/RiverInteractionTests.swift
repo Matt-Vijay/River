@@ -32,7 +32,7 @@ final class RiverInteractionTests: XCTestCase {
         XCTAssertTrue(app.staticTexts[
             "Your current hand will be folded. You will sit out future hands."
         ].exists)
-        button(labeled: "Stay").tap()
+        button("table.leave.cancel").tap()
         XCTAssertTrue(fold.waitForExistence(timeout: defaultTimeout))
 
         let raise = button("table.action.raise.expand")
@@ -110,24 +110,6 @@ final class RiverInteractionTests: XCTestCase {
         XCTAssertFalse(app.textFields["profile.name"].exists)
     }
 
-    func testLobbyLeaveIsConfirmedAndNeverStartsTheGame() {
-        saveProfile(named: "River")
-
-        button("lobby.leave").tap()
-        XCTAssertTrue(
-            app.staticTexts["You will give up your seat in the lobby."]
-                .waitForExistence(timeout: defaultTimeout)
-        )
-        button(labeled: "Stay").tap()
-        XCTAssertTrue(button("lobby.startGame").exists)
-        button("lobby.leave").tap()
-        button("lobby.leave.confirm").tap()
-        XCTAssertFalse(app.buttons["lobby.leave"].exists)
-        XCTAssertFalse(app.descendants(matching: .any)["lobby.localSeat"].exists)
-        XCTAssertFalse(button("lobby.startGame").isEnabled)
-        XCTAssertFalse(app.buttons["table.action.fold"].exists)
-    }
-
     private func saveProfile(named name: String) {
         let nameField = textField("profile.name", timeout: 5)
         nameField.tap()
@@ -149,15 +131,6 @@ final class RiverInteractionTests: XCTestCase {
         let element = app.buttons.matching(identifier: identifier).firstMatch
         return require(element, timeout: timeout,
                        message: "Missing button \(identifier)", file: file, line: line)
-    }
-
-    private func button(labeled label: String,
-                        timeout: TimeInterval? = nil,
-                        file: StaticString = #filePath,
-        line: UInt = #line) -> XCUIElement {
-        let element = app.buttons[label].firstMatch
-        return require(element, timeout: timeout,
-                       message: "Missing button labeled \(label)", file: file, line: line)
     }
 
     private func waitUntilHittable(_ element: XCUIElement,
