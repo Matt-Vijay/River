@@ -7,6 +7,26 @@ public enum GamePayload {
     /// Leaves room for URL syntax under Messages' 5,000-character limit.
     static let maximumEncodedPayloadLength = 4_900
     static let maximumDecodedPayloadLength = 16 * 1_024
+
+    /// A non-throwing decoding surface for persisted or received messages. Callers
+    /// can discard bad storage without trying to interpret Foundation's decoding
+    /// error strings.
+    public enum DecodeFailure: String, Sendable, Equatable {
+        case empty
+        case transportTooLarge
+        case malformedEncoding
+        case invalidCompression
+        case decodedTooLarge
+        case invalidShape
+        case unsupportedVersion
+        case integrityMismatch
+        case invalidState
+    }
+
+    public enum DecodeOutcome: Sendable, Equatable {
+        case decoded(TableMessage)
+        case rejected(DecodeFailure)
+    }
 }
 
 extension Data {
@@ -30,6 +50,12 @@ extension Data {
 extension GamePayload {
     static let legacyTableIDKey = CodingUserInfoKey(
         rawValue: "com.dewylabs.river.legacyTableID"
+    )!
+    static let integrityPrevalidatedKey = CodingUserInfoKey(
+        rawValue: "com.dewylabs.river.integrityPrevalidated"
+    )!
+    static let wireVersionKey = CodingUserInfoKey(
+        rawValue: "com.dewylabs.river.wireVersion"
     )!
 
     static var encoder: JSONEncoder {
@@ -62,12 +88,18 @@ extension GamePayload {
     }
 
     static func conflictKey(for message: TableMessage) -> String {
-        guard let data = try? encoder.encode(message) else { return "" }
-        return digestIdentifier(for: data)
+        stateFingerprint(for: message)
     }
 
     public static func encode(_ message: TableMessage) throws -> String {
-        let compressed = try (encoder.encode(message) as NSData).compressed(using: .lzfse) as Data
+        let data = try encoder.encode(message)
+        guard data.count <= maximumDecodedPayloadLength else {
+            throw EncodingError.invalidValue(
+                message,
+                .init(codingPath: [], debugDescription: "Decoded table payload exceeds limit")
+            )
+        }
+        let compressed = try (data as NSData).compressed(using: .lzfse) as Data
         let encoded = "z" + compressed.base64URLEncodedString()
         guard encoded.utf8.count <= maximumEncodedPayloadLength else {
             throw EncodingError.invalidValue(
@@ -79,12 +111,19 @@ extension GamePayload {
     }
 
     public static func decodeMessage(from string: String) throws -> TableMessage {
+        guard !string.isEmpty else {
+            throw decodingError("Table payload is empty")
+        }
         guard string.utf8.count <= maximumEncodedPayloadLength else {
             throw decodingError("Table payload exceeds transport limit")
         }
         let isCompressed = string.first == "z"
         let encodedData = isCompressed ? String(string.dropFirst()) : string
-        guard let wireData = Data(base64URLEncoded: encodedData) else {
+        guard !encodedData.isEmpty,
+              encodedData.utf8.allSatisfy(Self.isBase64URLByte),
+              encodedData.utf8.count % 4 != 1,
+              let wireData = Data(base64URLEncoded: encodedData),
+              wireData.base64URLEncodedString() == encodedData else {
             throw decodingError("Not valid base64url")
         }
         let data = try isCompressed
@@ -93,9 +132,21 @@ extension GamePayload {
         guard data.count <= maximumDecodedPayloadLength else {
             throw decodingError("Decoded table payload exceeds limit")
         }
+        try validateJSONShape(data)
+        try validateIntegrity(in: data)
         let decoder = decoder
         decoder.userInfo[legacyTableIDKey] = data
+        decoder.userInfo[integrityPrevalidatedKey] = true
+        decoder.userInfo[wireVersionKey] = wireVersion(in: data)
         return try decoder.decode(TableMessage.self, from: data)
+    }
+
+    public static func decodeOutcome(from string: String) -> DecodeOutcome {
+        do {
+            return .decoded(try decodeMessage(from: string))
+        } catch {
+            return .rejected(classify(error, input: string))
+        }
     }
 
     private static func decompressedPayload(_ data: Data) throws -> Data {
@@ -109,8 +160,11 @@ extension GamePayload {
                     destination, capacity, source, data.count, nil, COMPRESSION_LZFSE)
             }
         }
-        guard count > 0, count <= maximumDecodedPayloadLength else {
-            throw decodingError("Invalid or oversized compressed table payload")
+        guard count > 0 else {
+            throw decodingError("Invalid compressed table payload")
+        }
+        guard count <= maximumDecodedPayloadLength else {
+            throw decodingError("Decoded table payload exceeds limit")
         }
         decoded.count = count
         return decoded
@@ -120,8 +174,307 @@ extension GamePayload {
         .dataCorrupted(.init(codingPath: [], debugDescription: description))
     }
 
-    private static func digestIdentifier(for data: Data) -> String {
-        SHA256.hash(data: data).prefix(16)
+    private static func isBase64URLByte(_ byte: UInt8) -> Bool {
+        (48...57).contains(byte)
+            || (65...90).contains(byte)
+            || (97...122).contains(byte)
+            || byte == 45
+            || byte == 95
+    }
+
+    private static func validateJSONShape(_ data: Data) throws {
+        var keyScanner = JSONKeyScanner(data)
+        try keyScanner.validate()
+
+        let object: Any
+        do {
+            object = try JSONSerialization.jsonObject(with: data)
+        } catch {
+            throw decodingError("Table payload is not valid JSON")
+        }
+        guard object is [String: Any] else {
+            throw decodingError("Table payload root must be an object")
+        }
+
+        var nodeCount = 0
+        func visit(_ value: Any, depth: Int) throws {
+            nodeCount += 1
+            guard nodeCount <= 512, depth <= 12 else {
+                throw decodingError("Table payload shape exceeds limits")
+            }
+            if let dictionary = value as? [String: Any] {
+                guard dictionary.count <= 32 else {
+                    throw decodingError("Table object has too many fields")
+                }
+                for (key, child) in dictionary {
+                    guard !key.isEmpty, key.utf8.count <= 64 else {
+                        throw decodingError("Table field name exceeds limits")
+                    }
+                    try visit(child, depth: depth + 1)
+                }
+            } else if let array = value as? [Any] {
+                guard array.count <= 64 else {
+                    throw decodingError("Table array exceeds limits")
+                }
+                for child in array { try visit(child, depth: depth + 1) }
+            } else if let string = value as? String {
+                guard string.utf8.count <= 4_096 else {
+                    throw decodingError("Table string exceeds limits")
+                }
+            } else if value is NSNumber || value is NSNull {
+                return
+            } else {
+                throw decodingError("Unsupported table value")
+            }
+        }
+        try visit(object, depth: 0)
+    }
+
+    private static func classify(_ error: Error, input: String) -> DecodeFailure {
+        if input.isEmpty { return .empty }
+        if input.utf8.count > maximumEncodedPayloadLength { return .transportTooLarge }
+
+        let description: String
+        if case DecodingError.dataCorrupted(let context) = error {
+            description = context.debugDescription
+        } else {
+            description = String(describing: error)
+        }
+        if description.contains("base64url") { return .malformedEncoding }
+        if description.contains("compressed") { return .invalidCompression }
+        if description.contains("Decoded table payload exceeds") { return .decodedTooLarge }
+        if description.contains("Unsupported table message wire version") {
+            return .unsupportedVersion
+        }
+        if description.contains("integrity") { return .integrityMismatch }
+        if description.contains("shape")
+            || description.contains("Unknown")
+            || description.contains("payload wrapper")
+            || description.contains("root must")
+            || description.contains("too many fields")
+            || description.contains("field name")
+            || description.contains("array exceeds")
+            || description.contains("string exceeds")
+            || description.contains("Duplicate JSON")
+            || description.contains("valid JSON")
+            || description.contains("Unsupported table value") {
+            return .invalidShape
+        }
+        return .invalidState
+    }
+
+    /// JSONSerialization intentionally accepts repeated object keys. Walk the
+    /// already size-bounded UTF-8 source as tokens so no object can smuggle an
+    /// alternate value past the canonical integrity and Codable passes.
+    private struct JSONKeyScanner {
+        private let bytes: [UInt8]
+        private var index = 0
+        private var nodeCount = 0
+
+        init(_ data: Data) {
+            bytes = Array(data)
+        }
+
+        mutating func validate() throws {
+            skipWhitespace()
+            try scanValue(depth: 0)
+            skipWhitespace()
+            guard index == bytes.count else { throw invalidJSON() }
+        }
+
+        private mutating func scanValue(depth: Int) throws {
+            nodeCount += 1
+            guard nodeCount <= 512, depth <= 12 else {
+                throw GamePayload.decodingError("Table payload shape exceeds limits")
+            }
+            skipWhitespace()
+            guard let byte = current else { throw invalidJSON() }
+            switch byte {
+            case 0x7B: try scanObject(depth: depth) // {
+            case 0x5B: try scanArray(depth: depth)  // [
+            case 0x22: _ = try scanString()        // "
+            default: try scanScalar()
+            }
+        }
+
+        private mutating func scanObject(depth: Int) throws {
+            index += 1
+            skipWhitespace()
+            if consume(0x7D) { return } // }
+
+            var keys: Set<String> = []
+            while true {
+                skipWhitespace()
+                guard current == 0x22 else { throw invalidJSON() }
+                let encodedKey = try scanString()
+                guard let key = try? JSONDecoder().decode(String.self, from: encodedKey) else {
+                    throw invalidJSON()
+                }
+                guard keys.insert(key).inserted else {
+                    throw GamePayload.decodingError("Duplicate JSON object field")
+                }
+                guard keys.count <= 32 else {
+                    throw GamePayload.decodingError("Table object has too many fields")
+                }
+
+                skipWhitespace()
+                guard consume(0x3A) else { throw invalidJSON() } // :
+                try scanValue(depth: depth + 1)
+                skipWhitespace()
+                if consume(0x7D) { return } // }
+                guard consume(0x2C) else { throw invalidJSON() } // ,
+            }
+        }
+
+        private mutating func scanArray(depth: Int) throws {
+            index += 1
+            skipWhitespace()
+            if consume(0x5D) { return } // ]
+
+            var count = 0
+            while true {
+                count += 1
+                guard count <= 64 else {
+                    throw GamePayload.decodingError("Table array exceeds limits")
+                }
+                try scanValue(depth: depth + 1)
+                skipWhitespace()
+                if consume(0x5D) { return } // ]
+                guard consume(0x2C) else { throw invalidJSON() } // ,
+            }
+        }
+
+        private mutating func scanString() throws -> Data {
+            let start = index
+            guard consume(0x22) else { throw invalidJSON() }
+            while let byte = current {
+                index += 1
+                if byte == 0x22 {
+                    return Data(bytes[start..<index])
+                }
+                if byte == 0x5C { // escaped byte; Foundation validates the escape syntax next
+                    guard current != nil else { throw invalidJSON() }
+                    index += 1
+                }
+            }
+            throw invalidJSON()
+        }
+
+        private mutating func scanScalar() throws {
+            let start = index
+            while let byte = current,
+                  byte != 0x2C, byte != 0x5D, byte != 0x7D,
+                  !Self.isWhitespace(byte) {
+                index += 1
+            }
+            guard index > start else { throw invalidJSON() }
+        }
+
+        private var current: UInt8? {
+            index < bytes.count ? bytes[index] : nil
+        }
+
+        private mutating func consume(_ byte: UInt8) -> Bool {
+            guard current == byte else { return false }
+            index += 1
+            return true
+        }
+
+        private mutating func skipWhitespace() {
+            while let byte = current, Self.isWhitespace(byte) { index += 1 }
+        }
+
+        private static func isWhitespace(_ byte: UInt8) -> Bool {
+            byte == 0x20 || byte == 0x09 || byte == 0x0A || byte == 0x0D
+        }
+
+        private func invalidJSON() -> DecodingError {
+            GamePayload.decodingError("Table payload is not valid JSON")
+        }
+    }
+
+    static func stateFingerprint(for message: TableMessage) -> String {
+        guard let data = try? canonicalStateData(for: message) else { return "" }
+        return digestIdentifier(for: data, byteCount: 16)
+    }
+
+    static func integrityDigest(for message: TableMessage) throws -> String {
+        digestIdentifier(for: try canonicalStateData(for: message), byteCount: 32)
+    }
+
+    static func integrityMatches(_ supplied: String, message: TableMessage) -> Bool {
+        guard supplied.utf8.count == 64,
+              let expected = try? integrityDigest(for: message) else { return false }
+        return zip(supplied.utf8, expected.utf8).reduce(UInt8(0)) {
+            $0 | ($1.0 ^ $1.1)
+        } == 0
+    }
+
+    private static func canonicalStateData(for message: TableMessage) throws -> Data {
+        let kind: String
+        let encodedState: Data
+        switch message {
+        case .lobby(let lobby):
+            kind = "lobby"
+            encodedState = try encoder.encode(lobby)
+        case .game(let game):
+            kind = "game"
+            encodedState = try encoder.encode(game)
+        }
+        let stateObject = try JSONSerialization.jsonObject(with: encodedState)
+        let state = try JSONSerialization.data(withJSONObject: stateObject, options: [.sortedKeys])
+
+        return framedStateData(kind: kind, state: state)
+    }
+
+    private static func framedStateData(kind: String, state: Data) -> Data {
+        var framed = Data("river-table-state-v1\u{0}".utf8)
+        framed.append(contentsOf: kind.utf8)
+        framed.append(0)
+        framed.append(state)
+        return framed
+    }
+
+    private static func validateIntegrity(in data: Data) throws {
+        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw decodingError("Table payload root must be an object")
+        }
+        let wireVersion = root["wireVersion"] as? Int ?? 0
+        guard wireVersion == 2 else { return }
+        let payloads = ["lobby", "game"].compactMap { kind -> (String, Any)? in
+            guard let wrapper = root[kind] as? [String: Any], let value = wrapper["_0"] else {
+                return nil
+            }
+            return (kind, value)
+        }
+        guard payloads.count == 1,
+              let supplied = root["integrity"] as? String else {
+            throw decodingError("Table message integrity metadata is missing")
+        }
+        let state = try JSONSerialization.data(
+            withJSONObject: payloads[0].1, options: [.sortedKeys])
+        let expected = digestIdentifier(
+            for: framedStateData(kind: payloads[0].0, state: state), byteCount: 32)
+        guard supplied.utf8.count == expected.utf8.count else {
+            throw decodingError("Table message integrity check failed")
+        }
+        let mismatch = zip(supplied.utf8, expected.utf8).reduce(UInt8(0)) {
+            $0 | ($1.0 ^ $1.1)
+        }
+        guard mismatch == 0 else {
+            throw decodingError("Table message integrity check failed")
+        }
+    }
+
+    private static func wireVersion(in data: Data) -> Int {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return 0
+        }
+        return root["wireVersion"] as? Int ?? 0
+    }
+
+    private static func digestIdentifier(for data: Data, byteCount: Int = 16) -> String {
+        SHA256.hash(data: data).prefix(byteCount)
             .map { String(format: "%02x", $0) }
             .joined()
     }

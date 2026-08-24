@@ -4,6 +4,12 @@ public enum TurnClock {
     public static let defaultDuration: TimeInterval = 30
     static let maximumDuration: TimeInterval = 5 * 60
 
+    static func isSaneWireDate(_ date: Date) -> Bool {
+        date.timeIntervalSinceReferenceDate.isFinite
+            && date >= Date.distantPast
+            && date <= Date.distantFuture
+    }
+
     public static func normalized(_ duration: TimeInterval) -> TimeInterval {
         guard duration.isFinite, duration > 0 else { return defaultDuration }
         return min(duration, maximumDuration)

@@ -188,6 +188,7 @@ public struct StaleTableView: View {
     case olderMessage
     case rejectedAction(TableOperationRejection)
     case invalidPayload
+    case unverifiedMessage
     case encodingFailed
     case sendFailed
   }
@@ -233,6 +234,11 @@ public struct StaleTableView: View {
       (
         "Could not open table",
         "This message has invalid table data. Open the newest River message."
+      )
+    case .unverifiedMessage:
+      (
+        "Older table format",
+        "This table predates verified player identity. Start a new River table to continue safely."
       )
     case .encodingFailed:
       (

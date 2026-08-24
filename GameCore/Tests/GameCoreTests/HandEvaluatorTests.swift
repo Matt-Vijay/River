@@ -41,6 +41,11 @@ struct HandEvaluatorTests {
         #expect(wheel.category == .straight)
         #expect(wheel.tiebreakers == [5])
         #expect(eval("2c 3h 4s 5d 6c") > wheel)
+
+        let wheelFlush = eval("As 2s 3s 4s 5s 9d Kh")
+        #expect(wheelFlush.category == .straightFlush)
+        #expect(wheelFlush.tiebreakers == [5])
+        #expect(eval("As 2d 3h 4c 5s 6s Kh").tiebreakers == [6])
     }
 
     @Test("full houses compare trips before pairs")
@@ -71,6 +76,101 @@ struct HandEvaluatorTests {
 
     }
 
+    @Test("every category carries its complete poker tie key")
+    func completeTieKeys() {
+        #expect(eval("As Kd 9c 7h 4s").tiebreakers == [14, 13, 9, 7, 4])
+        #expect(eval("As Ad Kc Qh 9s").tiebreakers == [14, 13, 12, 9])
+        #expect(eval("As Ad Kc Kh 9s").tiebreakers == [14, 13, 9])
+        #expect(eval("As Ad Ac Kh 9s").tiebreakers == [14, 13, 9])
+        #expect(eval("Ts Jd Qc Kh As").tiebreakers == [14])
+        #expect(eval("As Ks 9s 7s 4s").tiebreakers == [14, 13, 9, 7, 4])
+        #expect(eval("As Ad Ac Kh Ks").tiebreakers == [14, 13])
+        #expect(eval("As Ad Ac Ah Ks").tiebreakers == [14, 13])
+        #expect(eval("As Ks Qs Js Ts").tiebreakers == [14])
+    }
+
+    @Test("the final relevant kicker breaks every non-straight tie")
+    func deepestKickers() {
+        let comparisons = [
+            ("As Kd 9c 7h 4s", "Ah Kc 9d 7s 3h"),
+            ("As Ad Kc Qh 9s", "Ac Ah Kd Qs 8h"),
+            ("As Ad Kc Kh 9s", "Ac Ah Kd Ks 8h"),
+            ("As Ad Ac Kh 9s", "Ah As Ad Kc 8s"),
+            ("As Js 9s 7s 4s", "Ah Jh 9h 7h 3h"),
+            ("As Ad Ac Kh Ks", "Ah As Ad Qc Qs"),
+            ("As Ad Ac Ah Ks", "As Ad Ac Ah Qs"),
+        ]
+
+        for (stronger, weaker) in comparisons {
+            #expect(eval(stronger) > eval(weaker))
+        }
+    }
+
+    @Test("the board can play and tied suits never choose a winner")
+    func boardPlays() {
+        let board = cards("Ah Kd Qc Js Th")
+        let first = HandEvaluator.evaluate(cards("2c 3c") + board)
+        let second = HandEvaluator.evaluate(cards("9h 9s") + board)
+
+        #expect(first == second)
+        #expect(first.category == .straight)
+        #expect(Set(first.bestFive) == Set(board))
+        #expect(Set(second.bestFive) == Set(board))
+
+        let quadsBoard = cards("9c 9d 9h 9s 2c")
+        let aceSpades = HandEvaluator.evaluate(cards("As Kd") + quadsBoard)
+        let aceHearts = HandEvaluator.evaluate(cards("Ah Qd") + quadsBoard)
+        #expect(aceSpades == aceHearts)
+        #expect(aceSpades.tiebreakers == [9, 14])
+    }
+
+    @Test("multiple made combinations choose the highest complete rank")
+    func competingCombinations() {
+        let doubleTrips = eval("As Ah Ad Ks Kh Kd 2c")
+        #expect(doubleTrips.category == .fullHouse)
+        #expect(doubleTrips.tiebreakers == [14, 13])
+
+        let threePairs = eval("As Ah Ks Kh Qs Qh 2c")
+        #expect(threePairs.category == .twoPair)
+        #expect(threePairs.tiebreakers == [14, 13, 12])
+
+        let sixCardFlush = eval("As Js 9s 7s 4s 2s Kd")
+        #expect(sixCardFlush.category == .flush)
+        #expect(sixCardFlush.tiebreakers == [14, 11, 9, 7, 4])
+        #expect(!sixCardFlush.bestFive.contains(Card(rank: .two, suit: .spades)))
+    }
+
+    @Test("equal-rank best-five metadata is canonical across card order")
+    func canonicalBestFive() {
+        let source = cards("As Ah Ad Ks Kh Kd 2c")
+        let expected = HandEvaluator.evaluate(source)
+
+        for offset in source.indices {
+            let rotated = Array(source[offset...] + source[..<offset])
+            let reversed = Array(rotated.reversed())
+            #expect(HandEvaluator.evaluate(rotated).bestFive == expected.bestFive)
+            #expect(HandEvaluator.evaluate(reversed).bestFive == expected.bestFive)
+        }
+    }
+
+    @Test("best-of-seven agrees with an independent deterministic oracle sample")
+    func referenceOracleSample() {
+        var mismatch: String?
+
+        for seed in UInt64(0)..<10_000 {
+            let hand = Array(Card.shuffledDeck(seed: seed).prefix(7))
+            let actual = HandEvaluator.evaluate(hand)
+            let actualKey = [actual.category.rawValue] + actual.tiebreakers
+            let expectedKey = referenceBestKey(hand)
+            if actualKey != expectedKey {
+                mismatch = "seed=\(seed), actual=\(actualKey), expected=\(expectedKey)"
+                break
+            }
+        }
+
+        #expect(mismatch == nil)
+    }
+
     @Test("partial hands are ranked without inventing made hands")
     func partialHands() {
         #expect(HandEvaluator.evaluateIfPossible([]) == nil)
@@ -87,4 +187,81 @@ struct HandEvaluatorTests {
         #expect(connectors.category == .highCard)
         #expect(connectors.tiebreakers == [8, 7, 6, 5])
     }
+}
+
+/// A deliberately separate five-card implementation used as a regression oracle.
+/// It does not share the production evaluator's feature extraction or branching.
+private func referenceBestKey(_ cards: [Card]) -> [Int] {
+    precondition((5...7).contains(cards.count))
+    var best: [Int]?
+    var selection: [Card] = []
+
+    func visit(_ start: Int) {
+        if selection.count == 5 {
+            let candidate = referenceFiveKey(selection)
+            if best == nil || lexicographicallyLess(best!, candidate) {
+                best = candidate
+            }
+            return
+        }
+
+        let finalStart = cards.count - (5 - selection.count)
+        guard start <= finalStart else { return }
+        for index in start...finalStart {
+            selection.append(cards[index])
+            visit(index + 1)
+            selection.removeLast()
+        }
+    }
+
+    visit(0)
+    return best!
+}
+
+private func referenceFiveKey(_ cards: [Card]) -> [Int] {
+    precondition(cards.count == 5)
+    let ranks = cards.map(\.rank.rawValue).sorted(by: >)
+    let rankCounts = Dictionary(grouping: ranks, by: { $0 }).mapValues(\.count)
+    let groups = rankCounts.map { (rank: $0.key, count: $0.value) }.sorted {
+        $0.count != $1.count ? $0.count > $1.count : $0.rank > $1.rank
+    }
+    let flush = Set(cards.map(\.suit)).count == 1
+    let uniqueRanks = Array(Set(ranks)).sorted(by: >)
+    let straightHigh: Int? = if uniqueRanks == [14, 5, 4, 3, 2] {
+        5
+    } else if uniqueRanks.count == 5, uniqueRanks[0] - uniqueRanks[4] == 4 {
+        uniqueRanks[0]
+    } else {
+        nil
+    }
+
+    if flush, let straightHigh { return [HandCategory.straightFlush.rawValue, straightHigh] }
+    if groups[0].count == 4 {
+        return [HandCategory.fourOfAKind.rawValue, groups[0].rank, groups[1].rank]
+    }
+    if groups[0].count == 3, groups[1].count == 2 {
+        return [HandCategory.fullHouse.rawValue, groups[0].rank, groups[1].rank]
+    }
+    if flush { return [HandCategory.flush.rawValue] + ranks }
+    if let straightHigh { return [HandCategory.straight.rawValue, straightHigh] }
+    if groups[0].count == 3 {
+        return [HandCategory.threeOfAKind.rawValue, groups[0].rank]
+            + groups.dropFirst().map(\.rank).sorted(by: >)
+    }
+    if groups[0].count == 2, groups[1].count == 2 {
+        let pairs = groups.prefix(2).map(\.rank).sorted(by: >)
+        return [HandCategory.twoPair.rawValue] + pairs + [groups[2].rank]
+    }
+    if groups[0].count == 2 {
+        return [HandCategory.pair.rawValue, groups[0].rank]
+            + groups.dropFirst().map(\.rank).sorted(by: >)
+    }
+    return [HandCategory.highCard.rawValue] + ranks
+}
+
+private func lexicographicallyLess(_ lhs: [Int], _ rhs: [Int]) -> Bool {
+    for (left, right) in zip(lhs, rhs) where left != right {
+        return left < right
+    }
+    return lhs.count < rhs.count
 }

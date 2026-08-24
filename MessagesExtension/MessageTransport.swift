@@ -6,43 +6,142 @@ import GameCore
 enum SelectedTableMessage {
     case none
     case invalidPayload
+    /// Receipt-less transports remain displayable for migration, but can never
+    /// authorize a table mutation.
+    case unverified(TableMessage)
     case message(TableMessage)
+
+    var decodedMessage: TableMessage? {
+        switch self {
+        case .unverified(let message), .message(let message): message
+        case .none, .invalidPayload: nil
+        }
+    }
 }
 
 enum MessagePayloads {
     private static let payloadKey = "g"
+    private static let receiptKey = "r"
     private static let transportScheme = "data"
     private static let transportPath = ",river"
+    /// Messages documents a 5,000-character URL ceiling. Count UTF-8 bytes as
+    /// the stricter bound because every URL this transport emits is ASCII.
+    private static let maximumURLLength = 5_000
+    private static let maximumEncodedReceiptLength =
+        ((TableMutationReceipt.maximumEncodedLength + 2) / 3) * 4
 
-    static func tableMessage(from message: MSMessage?) -> SelectedTableMessage {
+    /// A nil `senderParticipantIdentifier` never authenticates a received
+    /// message. The explicit optimistic identity is only for an `MSMessage`
+    /// object the controller itself just constructed locally.
+    static func tableMessage(
+        from message: MSMessage?,
+        authenticatingOptimisticLocalParticipant optimisticLocalParticipant: UUID? = nil,
+        predecessor: TableMessage? = nil
+    ) -> SelectedTableMessage {
         guard let url = message?.url,
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return .none
         }
         let isCurrentTransport = components.scheme == transportScheme
+            && components.host == nil
             && components.path == transportPath
-        let isLegacyTransport = components.scheme == "holdem" && components.host == "table"
+        let isLegacyTransport = components.scheme == "holdem"
+            && components.host == "table"
+            && components.path.isEmpty
         guard isCurrentTransport || isLegacyTransport else { return .none }
-        guard let items = components.queryItems else { return .invalidPayload }
-        let payloads = items.filter { $0.name == payloadKey }
-        guard payloads.count == 1, let payload = payloads[0].value else {
+        guard url.absoluteString.utf8.count <= maximumURLLength,
+              components.user == nil,
+              components.password == nil,
+              components.port == nil,
+              components.fragment == nil,
+              let items = components.queryItems,
+              !items.isEmpty,
+              items.allSatisfy({ $0.value != nil }),
+              Set(items.map(\.name)).count == items.count else {
             return .invalidPayload
         }
 
+        let names = Set(items.map(\.name))
+        let expectedNames: Set<String> = isCurrentTransport
+            ? (names == [payloadKey] ? [payloadKey] : [payloadKey, receiptKey])
+            : [payloadKey]
+        guard names == expectedNames,
+              let payload = items.first(where: { $0.name == payloadKey })?.value else {
+            return .invalidPayload
+        }
+
+        let table: TableMessage
         do {
-            return .message(try GamePayload.decodeMessage(from: payload))
+            table = try GamePayload.decodeMessage(from: payload)
         } catch {
             return .invalidPayload
         }
+
+        // Both the old holdem URL and the receipt-less current URL predate
+        // participant binding. They are intentionally read-only.
+        guard isCurrentTransport, names.contains(receiptKey),
+              let encodedReceipt = items.first(where: { $0.name == receiptKey })?.value,
+              let receipt = decodeReceipt(encodedReceipt),
+              receipt.matchesResult(table) else {
+            return isLegacyTransport || names == [payloadKey]
+                ? .unverified(table)
+                : .invalidPayload
+        }
+
+        let authenticatedParticipant: UUID
+        if let sender = message?.senderParticipantIdentifier {
+            if let optimisticLocalParticipant, sender != optimisticLocalParticipant {
+                return .invalidPayload
+            }
+            authenticatedParticipant = sender
+        } else if let optimisticLocalParticipant {
+            authenticatedParticipant = optimisticLocalParticipant
+        } else {
+            return .invalidPayload
+        }
+        guard receipt.actorID == authenticatedParticipant.uuidString,
+              let actor = TableActor(receipt.actorID) else {
+            return .invalidPayload
+        }
+
+        // A locally held state is only a replay predecessor when its full
+        // revision (including the state fingerprint branch) matches the claim.
+        // Unrelated or skipped states do not make an otherwise bound receipt
+        // fail merely because they happen to be on screen.
+        if let predecessor, predecessor.revision == receipt.parentRevision {
+            guard case .verified(let replayed) = receipt.verifying(
+                predecessor: predecessor,
+                authenticatedActor: actor
+            ), replayed == table else {
+                return .invalidPayload
+            }
+        }
+
+        return .message(table)
     }
 
-    static func revision(from message: MSMessage?) -> TableRevision? {
-        guard case .message(let table) = tableMessage(from: message) else { return nil }
+    static func revision(
+        from message: MSMessage?,
+        authenticatingOptimisticLocalParticipant optimisticLocalParticipant: UUID? = nil,
+        predecessor: TableMessage? = nil
+    ) -> TableRevision? {
+        guard case .message(let table) = tableMessage(
+            from: message,
+            authenticatingOptimisticLocalParticipant: optimisticLocalParticipant,
+            predecessor: predecessor
+        ) else { return nil }
         return table.revision
     }
 
     static func makeMessage(for message: TableMessage,
+                            receipt: TableMutationReceipt,
                             replacing sourceMessage: MSMessage?) throws -> MSMessage {
+        guard receipt.matchesResult(message) else {
+            throw EncodingError.invalidValue(
+                receipt,
+                .init(codingPath: [],
+                      debugDescription: "Mutation receipt does not match table result"))
+        }
         let session = sourceMessage?.session ?? MSSession()
         let messageView = MSMessage(session: session)
         let summary = GamePayload.summary(for: message)
@@ -69,15 +168,57 @@ enum MessagePayloads {
         components.scheme = transportScheme
         components.path = transportPath
         components.queryItems = [
-            URLQueryItem(name: payloadKey, value: try GamePayload.encode(message))
+            URLQueryItem(name: payloadKey, value: try GamePayload.encode(message)),
+            URLQueryItem(name: receiptKey, value: try receipt.encoded().riverBase64URLEncodedString())
         ]
-        guard let url = components.url else {
+        guard let url = components.url,
+              url.absoluteString.utf8.count <= maximumURLLength else {
             throw EncodingError.invalidValue(
-                message, .init(codingPath: [], debugDescription: "Could not build message URL"))
+                message,
+                .init(codingPath: [],
+                      debugDescription: "Could not build message URL within transport limit"))
         }
         messageView.url = url
 
         return messageView
+    }
+
+    private static func decodeReceipt(_ string: String) -> TableMutationReceipt? {
+        guard !string.isEmpty,
+              string.utf8.count <= maximumEncodedReceiptLength,
+              string.utf8.allSatisfy({ byte in
+                  (48...57).contains(byte)
+                      || (65...90).contains(byte)
+                      || (97...122).contains(byte)
+                      || byte == 45
+                      || byte == 95
+              }),
+              string.utf8.count % 4 != 1,
+              let data = Data(riverBase64URLString: string),
+              data.riverBase64URLEncodedString() == string else {
+            return nil
+        }
+        return try? TableMutationReceipt.decode(from: data)
+    }
+}
+
+private extension Data {
+    func riverBase64URLEncodedString() -> String {
+        base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+
+    init?(riverBase64URLString string: String) {
+        var padded = string
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = padded.count % 4
+        if remainder > 0 {
+            padded += String(repeating: "=", count: 4 - remainder)
+        }
+        self.init(base64Encoded: padded)
     }
 }
 

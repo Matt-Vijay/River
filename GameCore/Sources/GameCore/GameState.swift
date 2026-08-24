@@ -41,13 +41,20 @@ public struct HandResult: Codable, Sendable, Equatable {
                 debugDescription: "Best-five cards must contain five unique cards"
             )
         }
+        let wireAmountWon = try container.decode(Int.self, forKey: .amountWon)
+        if (decoder.userInfo[GamePayload.wireVersionKey] as? Int ?? 2) >= 2,
+           !(0...TableRules.tableMaximum).contains(wireAmountWon) {
+            throw DecodingError.dataCorruptedError(
+                forKey: .amountWon, in: container,
+                debugDescription: "Award amount is not canonical")
+        }
         self.init(
             playerID: try Identity.decoded(
                 container.decode(String.self, forKey: .playerID),
                 error: "Participant identity cannot be blank",
                 codingPath: container.codingPath + [CodingKeys.playerID]
             ),
-            amountWon: TableRules.table(try container.decode(Int.self, forKey: .amountWon)),
+            amountWon: TableRules.table(wireAmountWon),
             handName: try container.decodeIfPresent(String.self, forKey: .handName),
             bestFive: bestFive
         )
@@ -125,7 +132,11 @@ extension GameState {
 
     /// The amount every active player must match in this betting round.
     var currentBet: Int {
-        contenders.map(\.bet).max() ?? 0
+        let postedBet = contenders.map(\.bet).max() ?? 0
+        // A short all-in big blind does not reduce the preflop bring-in. The
+        // full blind remains the amount to call (and the basis of a raise),
+        // even when no player was able to post all of it.
+        return street == .preflop ? max(postedBet, bigBlind) : postedBet
     }
 
     /// Total chips in play, including live bets or completed-hand awards.

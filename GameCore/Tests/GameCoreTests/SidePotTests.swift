@@ -16,7 +16,7 @@ struct SidePotTests {
         #expect(winnings(in: state) == ["p0": 100, "p1": 150])
     }
 
-    @Test("an unmatched all-in layer returns to its only eligible player")
+    @Test("an unmatched all-in layer is returned, not reported as winnings")
     func unmatchedLayer() {
         let state = settledState(
             committed: [300, 400],
@@ -25,7 +25,22 @@ struct SidePotTests {
         )
 
         #expect(state.players.map(\.stack) == [600, 100])
-        #expect(winnings(in: state) == ["p0": 600, "p1": 100])
+        #expect(winnings(in: state) == ["p0": 600])
+        #expect(state.displayPot == 600)
+    }
+
+    @Test("an uncalled contribution is returned after an uncontested fold")
+    func uncalledBlindLayerIsReturned() {
+        var state = GameState.startHand(players: makePlayers([1000, 1000]),
+                                        dealerIndex: 0, smallBlind: 10, bigBlind: 20,
+                                        seed: 1, handNumber: 1)
+
+        let didFold = state.apply(.fold, by: 0)
+        #expect(didFold)
+        #expect(state.players.map(\.stack) == [990, 1010])
+        #expect(winnings(in: state) == ["p1": 20])
+        #expect(state.displayPot == 20)
+        #expect(totalChips(state) == 2000)
     }
 
     @Test("a folded player's unmatched layer is refunded")

@@ -66,12 +66,22 @@ extension Player: Codable {
             container.decode(String.self, forKey: .avatar),
             codingPath: container.codingPath + [PlayerCodingKeys.avatar]
         )
-        stack = TableRules.table(try container.decode(Int.self, forKey: .stack))
-        bet = TableRules.table(try container.decode(Int.self, forKey: .bet))
-        committed = max(
-            TableRules.table(try container.decode(Int.self, forKey: .committed)),
-            bet
-        )
+        let wireStack = try container.decode(Int.self, forKey: .stack)
+        let wireBet = try container.decode(Int.self, forKey: .bet)
+        let wireCommitted = try container.decode(Int.self, forKey: .committed)
+        if (decoder.userInfo[GamePayload.wireVersionKey] as? Int ?? 2) >= 2 {
+            guard (0...TableRules.tableMaximum).contains(wireStack),
+                  (0...TableRules.tableMaximum).contains(wireBet),
+                  (0...TableRules.tableMaximum).contains(wireCommitted),
+                  wireCommitted >= wireBet else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: container.codingPath,
+                          debugDescription: "Player chip fields are not canonical"))
+            }
+        }
+        stack = TableRules.table(wireStack)
+        bet = TableRules.table(wireBet)
+        committed = max(TableRules.table(wireCommitted), bet)
         status = try container.decode(PlayerStatus.self, forKey: .status)
         holeCards = try container.decode([Card].self, forKey: .holeCards)
         guard holeCards.count <= 2 else {
@@ -100,6 +110,19 @@ extension Player: Codable {
             )
         }
         lastAction = try container.decodeIfPresent(PlayerAction.self, forKey: .lastAction)
+        if (decoder.userInfo[GamePayload.wireVersionKey] as? Int ?? 2) >= 2 {
+            guard lastActionBet.map({ (0...TableRules.tableMaximum).contains($0) }) ?? true,
+                  lastAction.map({ action in
+                      if case .raise(let total) = action {
+                          return (0...TableRules.tableMaximum).contains(total)
+                      }
+                      return true
+                  }) ?? true else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: container.codingPath,
+                          debugDescription: "Player action totals are not canonical"))
+            }
+        }
         hasLeft = try container.decode(Bool.self, forKey: .hasLeft)
     }
 

@@ -5,7 +5,7 @@ import HoldemUI
 
 extension MessagesViewController {
     func heroID(_ conversation: MSConversation) -> String {
-        profile.playerID(seed: conversation.localParticipantIdentifier.uuidString)
+        conversation.localParticipantIdentifier.uuidString
     }
 
     func render(conversation: MSConversation) {
@@ -14,7 +14,7 @@ extension MessagesViewController {
             return
         }
         let source = displayedSourceMessage(in: conversation)
-        let selectedMessage = MessagePayloads.tableMessage(from: source)
+        let selectedMessage = authenticatedTableMessage(from: source, in: conversation)
         render(selectedMessage,
                profile: configuredProfile,
                conversation: conversation)
@@ -23,27 +23,59 @@ extension MessagesViewController {
     func displayedSourceMessage(in conversation: MSConversation) -> MSMessage? {
         if let activeSend,
            activeSend.conversation === conversation,
-           !supersedes(sourceMessageOverride, baseline: activeSend.outgoingMessage) {
+           !supersedes(
+               sourceMessageOverride,
+               baseline: activeSend.outgoingMessage,
+               in: conversation
+           ) {
             return activeSend.outgoingMessage
         }
         return sourceMessageOverride ?? conversation.selectedMessage
     }
 
-    func supersedes(_ candidate: MSMessage?, baseline: MSMessage) -> Bool {
-        guard let candidateRevision = MessagePayloads.revision(from: candidate),
-              let baselineRevision = MessagePayloads.revision(from: baseline) else {
+    func supersedes(
+        _ candidate: MSMessage?,
+        baseline: MSMessage,
+        in conversation: MSConversation
+    ) -> Bool {
+        guard case .message(let baselineMessage) = authenticatedTableMessage(
+            from: baseline,
+            in: conversation
+        ), case .message(let candidateMessage) = authenticatedTableMessage(
+            from: candidate,
+            in: conversation,
+            predecessor: baselineMessage
+        ) else {
             return false
         }
+        let candidateRevision = candidateMessage.revision
+        let baselineRevision = baselineMessage.revision
         return candidateRevision.tableID != baselineRevision.tableID
             || baselineRevision.isOlder(than: candidateRevision)
     }
 
     func shouldDisplayReceived(_ message: MSMessage, in conversation: MSConversation) -> Bool {
-        guard let displayed = displayedSourceMessage(in: conversation) else { return true }
-        if let currentRevision = MessagePayloads.revision(from: displayed) {
-            guard let incomingRevision = MessagePayloads.revision(from: message) else { return false }
+        guard let displayed = displayedSourceMessage(in: conversation) else {
+            guard case .message = authenticatedTableMessage(
+                from: message,
+                in: conversation
+            ) else { return false }
+            return true
+        }
+        let currentPayload = authenticatedTableMessage(from: displayed, in: conversation)
+        if let current = currentPayload.decodedMessage {
+            guard case .message(let incoming) = authenticatedTableMessage(
+                from: message,
+                in: conversation,
+                predecessor: current
+            ) else { return false }
+            let currentRevision = current.revision
+            let incomingRevision = incoming.revision
             return incomingRevision.tableID == currentRevision.tableID
                 && incomingRevision.isSameOrNewer(than: currentRevision)
+        }
+        guard case .message = authenticatedTableMessage(from: message, in: conversation) else {
+            return false
         }
         return message.session != nil && message.session == displayed.session
     }
@@ -64,6 +96,12 @@ extension MessagesViewController {
             )
         case .invalidPayload:
             showRecovery(summary: "Invalid table message", context: .invalidPayload)
+        case .unverified(let message):
+            showRecovery(
+                summary: GamePayload.summary(for: message),
+                context: .unverifiedMessage,
+                tableID: message.revision.tableID
+            )
         case .message(let message):
             let isOptimistic = activeSend?.conversation === conversation
                 && activeSend?.sentRevision == message.revision

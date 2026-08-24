@@ -57,7 +57,8 @@ struct HandRank: Comparable, Sendable {
 enum HandEvaluator {
     /// Best hand from 1 to 7 cards. With 6–7 cards, picks the best 5-card subset.
     static func evaluate(_ cards: [Card]) -> HandRank {
-        precondition(!cards.isEmpty, "Cannot evaluate an empty hand")
+        precondition((1...7).contains(cards.count), "Hold'em hands contain 1...7 cards")
+        precondition(Set(cards).count == cards.count, "Cannot evaluate duplicate cards")
         if cards.count <= 5 { return evaluateFive(cards) }
 
         var best: HandRank?
@@ -67,7 +68,9 @@ enum HandEvaluator {
         func visit(start: Int) {
             if selection.count == 5 {
                 let rank = evaluateFive(selection)
-                if best == nil || best! < rank { best = rank }
+                if best == nil || rank.isPreferredRepresentation(over: best!) {
+                    best = rank
+                }
                 return
             }
 
@@ -181,5 +184,15 @@ enum HandEvaluator {
         }
         if ranksDescending == [14, 5, 4, 3, 2] { return 5 }
         return nil
+    }
+}
+
+private extension HandRank {
+    /// Suits never break a poker tie, but several five-card subsets can represent
+    /// the same rank. Pick one canonical subset so replaying the same cards in a
+    /// different order still produces identical result metadata.
+    func isPreferredRepresentation(over other: HandRank) -> Bool {
+        if self != other { return self > other }
+        return other.bestFive.lexicographicallyPrecedes(bestFive)
     }
 }

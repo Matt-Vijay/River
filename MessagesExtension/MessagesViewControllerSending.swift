@@ -3,10 +3,41 @@ import Messages
 import GameCore
 
 extension MessagesViewController {
+    func authenticatedTableMessage(
+        from source: MSMessage?,
+        in conversation: MSConversation,
+        predecessor explicitPredecessor: TableMessage? = nil
+    ) -> SelectedTableMessage {
+        guard let source else { return .none }
+        let isOptimisticLocal = source === optimisticLocalMessage
+            || source === activeSend?.outgoingMessage
+        let storedPredecessor: TableMessage?
+        if let explicitPredecessor {
+            storedPredecessor = explicitPredecessor
+        } else if source === activeSend?.outgoingMessage {
+            storedPredecessor = activeSend?.recoveryMessage
+        } else if source === sourceMessageOverride {
+            storedPredecessor = sourceVerificationPredecessor
+        } else {
+            storedPredecessor = nil
+        }
+        return MessagePayloads.tableMessage(
+            from: source,
+            authenticatingOptimisticLocalParticipant: isOptimisticLocal
+                ? conversation.localParticipantIdentifier
+                : nil,
+            predecessor: storedPredecessor
+        )
+    }
+
     func send(_ kind: TableOperation, on message: TableMessage,
               conversation: MSConversation) {
         guard let sourceMessage = displayedSourceMessage(in: conversation),
-              MessagePayloads.revision(from: sourceMessage) == message.revision else {
+              case .message(let authenticatedMessage) = authenticatedTableMessage(
+                  from: sourceMessage,
+                  in: conversation
+              ),
+              authenticatedMessage == message else {
             showStale(message)
             return
         }
@@ -34,17 +65,22 @@ extension MessagesViewController {
     private func commit(_ kind: TableOperation, on message: TableMessage,
                         latestRevision: TableRevision?, replacing sourceMessage: MSMessage?,
                         conversation: MSConversation, dismissAfterSend: Bool) {
-        guard activeSend == nil else { return }
+        guard activeSend == nil,
+              let actor = TableActor(conversation.localParticipantIdentifier.uuidString) else {
+            return
+        }
 
-        switch message.committing(
+        switch TableMutationReceipt.recording(
             kind,
-            actorID: heroID(conversation),
+            on: message,
+            actor: actor,
             latestRevision: latestRevision,
-            now: Date()
+            at: Date()
         ) {
-        case .applied(let next):
+        case .applied(let next, let receipt):
             deliver(
                 next,
+                receipt: receipt,
                 recoveringFrom: message,
                 replacing: sourceMessage,
                 in: conversation,
@@ -54,16 +90,20 @@ extension MessagesViewController {
             render(conversation: conversation)
         case .rejected(let reason):
             showStale(message, context: .rejectedAction(reason))
+        case .unrecordable:
+            showStale(message, context: .encodingFailed)
         }
     }
 
-    private func deliver(_ message: TableMessage, recoveringFrom recoveryMessage: TableMessage,
+    private func deliver(_ message: TableMessage, receipt: TableMutationReceipt,
+                         recoveringFrom recoveryMessage: TableMessage,
                          replacing sourceMessage: MSMessage?, in conversation: MSConversation,
                          dismissAfterSend: Bool) {
         let outgoingMessage: MSMessage
         do {
             outgoingMessage = try MessagePayloads.makeMessage(
                 for: message,
+                receipt: receipt,
                 replacing: sourceMessage
             )
         } catch {
@@ -81,13 +121,14 @@ extension MessagesViewController {
             dismissAfterSend: dismissAfterSend
         )
         activeSend = send
+        optimisticLocalMessage = outgoingMessage
         render(conversation: conversation)
         rootHost.setInteractionEnabled(false)
         scheduleTimeout(for: send.id)
 
         conversation.send(outgoingMessage) { [weak self] error in
             DispatchQueue.main.async {
-                self?.finishSend(id: send.id, error: error)
+                self?.finishSend(id: send.id, error: error, confirmedMessage: nil)
             }
         }
     }
@@ -95,21 +136,34 @@ extension MessagesViewController {
     func acknowledgeActiveSend(with message: MSMessage) -> Bool {
         guard let send = activeSend,
               message.session == send.outgoingMessage.session,
-              MessagePayloads.revision(from: message) == send.sentRevision else { return false }
-        finishSend(id: send.id, error: nil)
+              message.url == send.outgoingMessage.url,
+              case .message(let authenticatedMessage) = authenticatedTableMessage(
+                  from: message,
+                  in: send.conversation,
+                  predecessor: send.recoveryMessage
+              ),
+              authenticatedMessage.revision == send.sentRevision else { return false }
+        finishSend(id: send.id, error: nil, confirmedMessage: message)
         return true
     }
 
-    private func finishSend(id: UUID, error: Error?) {
+    private func finishSend(id: UUID, error: Error?, confirmedMessage: MSMessage?) {
         guard let send = activeSend, send.id == id else { return }
         finishSendActivity()
         activeSend = nil
 
         guard activeConversation === send.conversation else { return }
         if let error {
+            if optimisticLocalMessage === send.outgoingMessage {
+                optimisticLocalMessage = nil
+            }
             let error = error as NSError
             NSLog("River transport send failed: %@/%ld", error.domain, error.code)
-            if supersedes(sourceMessageOverride, baseline: send.outgoingMessage) {
+            if supersedes(
+                sourceMessageOverride,
+                baseline: send.outgoingMessage,
+                in: send.conversation
+            ) {
                 render(conversation: send.conversation)
             } else {
                 showStale(send.recoveryMessage, context: .sendFailed)
@@ -117,14 +171,21 @@ extension MessagesViewController {
             return
         }
 
-        let wasSuperseded = supersedes(sourceMessageOverride, baseline: send.outgoingMessage)
+        let wasSuperseded = supersedes(
+            sourceMessageOverride,
+            baseline: send.outgoingMessage,
+            in: send.conversation
+        )
         revisionStore.observe(send.sentRevision)
         if wasSuperseded {
             rootHost.resumeAutomaticRendering()
             render(conversation: send.conversation)
             return
         }
-        sourceMessageOverride = send.outgoingMessage
+        let deliveredMessage = confirmedMessage ?? send.outgoingMessage
+        sourceMessageOverride = deliveredMessage
+        sourceVerificationPredecessor = send.recoveryMessage
+        optimisticLocalMessage = confirmedMessage == nil ? deliveredMessage : nil
 
         if send.dismissAfterSend {
             dismissCurrentSurface()
@@ -149,7 +210,8 @@ extension MessagesViewController {
         let workItem = DispatchWorkItem { [weak self] in
             self?.finishSend(
                 id: id,
-                error: NSError(domain: "River.MessagesTransport", code: 1)
+                error: NSError(domain: "River.MessagesTransport", code: 1),
+                confirmedMessage: nil
             )
         }
         sendTimeoutWorkItem = workItem

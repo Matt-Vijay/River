@@ -181,7 +181,8 @@ extension GameState {
         let eligibleOriginalIndices = players.indices.filter { players[$0].isEligibleForNextHand }
         guard eligibleOriginalIndices.count >= 2 else { return nil }
 
-        let nextDealerOriginalIndex = nextOriginalSeatAfterDealer(in: Set(eligibleOriginalIndices))
+        let eligible = Set(eligibleOriginalIndices)
+        let nextDealerOriginalIndex = nextDealerOriginalIndex(in: eligible)
         guard let dealer = eligibleOriginalIndices.firstIndex(of: nextDealerOriginalIndex) else {
             return nil
         }
@@ -201,14 +202,45 @@ extension GameState {
         return next
     }
 
-    private func nextOriginalSeatAfterDealer(in eligible: Set<Int>) -> Int {
-        guard !players.isEmpty else { return dealerIndex }
-        let dealerIndex = Self.normalizedSeat(dealerIndex, playerCount: players.count)
-        for offset in 1...players.count {
-            let candidate = (dealerIndex + offset) % players.count
-            if eligible.contains(candidate) { return candidate }
+    private func nextDealerOriginalIndex(in eligible: Set<Int>) -> Int {
+        // On the transition to heads-up, the button may need to move out of
+        // the ordinary sequence so the prior big blind is not big blind twice.
+        // Making that player the button preserves alternating blinds.
+        if eligible.count == 2,
+           let priorBigBlind = priorBigBlindOriginalIndex(),
+           eligible.contains(priorBigBlind) {
+            return priorBigBlind
         }
-        return eligible.min() ?? dealerIndex
+        return nextOriginalSeatAfterDealer(in: eligible)
+    }
+
+    private func priorBigBlindOriginalIndex() -> Int? {
+        let dealtIn = Set(players.indices.filter { players[$0].holeCards.count == 2 })
+        guard dealtIn.count >= 2 else { return nil }
+
+        if dealtIn.count == 2 {
+            return nextOriginalSeat(after: dealerIndex, in: dealtIn)
+        }
+        guard let smallBlind = nextOriginalSeat(after: dealerIndex, in: dealtIn) else {
+            return nil
+        }
+        return nextOriginalSeat(after: smallBlind, in: dealtIn)
+    }
+
+    private func nextOriginalSeat(after index: Int, in seats: Set<Int>) -> Int? {
+        guard !players.isEmpty else { return nil }
+        let index = Self.normalizedSeat(index, playerCount: players.count)
+        for offset in 1...players.count {
+            let candidate = (index + offset) % players.count
+            if seats.contains(candidate) { return candidate }
+        }
+        return nil
+    }
+
+    private func nextOriginalSeatAfterDealer(in eligible: Set<Int>) -> Int {
+        nextOriginalSeat(after: dealerIndex, in: eligible)
+            ?? eligible.min()
+            ?? dealerIndex
     }
 }
 
@@ -269,7 +301,11 @@ extension GameState {
                 ? TableRules.tableMaximum
                 : TableRules.table(product.partialValue)
             let eligible = contributors.filter { players[$0].isContesting }
-            let winners = winners(among: eligible, ranks: ranks)
+            // A contribution no opponent matched is not a pot. Return that
+            // layer without presenting it as money won at showdown.
+            let winners = contributors.count == 1
+                ? nil
+                : winners(among: eligible, ranks: ranks)
             for (seat, award) in split(amount, among: winners ?? contributors) {
                 let playerID = players[seat].id
                 credits[playerID] = TableRules.adding(

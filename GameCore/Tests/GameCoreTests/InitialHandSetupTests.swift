@@ -30,6 +30,45 @@ struct InitialHandSetupTests {
         #expect(totalChips(s) == 105)
     }
 
+    @Test("a short all-in big blind does not reduce the preflop bring-in")
+    func shortAllInBigBlindKeepsFullBringIn() throws {
+        var s = GameState.startHand(players: makePlayers([100, 5]),
+                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
+                                    seed: 1, handNumber: 1)
+
+        #expect(s.players[0].bet == 10)
+        #expect(s.players[1].bet == 5)
+        #expect(s.currentBet == 20)
+        #expect(s.currentToAct == 0)
+
+        let legal = s.legalActions(for: 0)
+        #expect(legal.callAmount == 10)
+        #expect(legal.raiseBounds == 40...100)
+        let didCall = s.apply(.call, by: 0)
+        #expect(didCall)
+        #expect(s.isHandComplete)
+        #expect(s.board.count == 5)
+        #expect(totalChips(s) == 105)
+        #expect(try #require(s.results).reduce(0) { $0 + $1.amountWon } == 10)
+
+        var multiway = GameState.startHand(players: makePlayers([100, 100, 5]),
+                                            dealerIndex: 0,
+                                            smallBlind: 10, bigBlind: 20,
+                                            seed: 2, handNumber: 1)
+        #expect(multiway.currentToAct == 0)
+        #expect(multiway.legalActions(for: 0).callAmount == 20)
+        let dealerCalled = multiway.apply(.call, by: 0)
+        #expect(dealerCalled)
+        #expect(multiway.currentToAct == 1)
+        #expect(multiway.legalActions(for: 1).callAmount == 10)
+        let smallBlindCalled = multiway.apply(.call, by: 1)
+        #expect(smallBlindCalled)
+        #expect(multiway.street == .flop)
+        #expect(!multiway.isHandComplete)
+        #expect(multiway.currentToAct == 1)
+        #expect(totalChips(multiway) == 205)
+    }
+
     @Test("three-handed: blinds left of dealer, UTG acts first")
     func threeHandedBlinds() {
         let s = GameState.startHand(players: makePlayers([1000, 1000, 1000]),
@@ -39,6 +78,17 @@ struct InitialHandSetupTests {
         #expect(s.players[2].bet == 20)   // BB
         #expect(s.currentToAct == 0)      // dealer is UTG three-handed
         #expect(s.deck.count == 46)
+    }
+
+    @Test("heads-up dealer is dealt the last card")
+    func headsUpDealerReceivesLastCard() {
+        let expectedDeck = Card.shuffledDeck(seed: 12)
+        let s = GameState.startHand(players: makePlayers([1000, 1000]),
+                                    dealerIndex: 0, smallBlind: 10, bigBlind: 20,
+                                    seed: 12, handNumber: 1)
+
+        #expect(s.players[1].holeCards == [expectedDeck[0], expectedDeck[2]])
+        #expect(s.players[0].holeCards == [expectedDeck[1], expectedDeck[3]])
     }
 
     @Test("dealer index is normalized before dealing")

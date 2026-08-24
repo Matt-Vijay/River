@@ -118,6 +118,25 @@ struct NextHandEligibilityTests {
         #expect(totalChips(next) == 2010)
     }
 
+    @Test("transitioning to heads-up does not give the prior big blind two big blinds")
+    func headsUpTransitionPreservesBlindAlternation() throws {
+        var state = GameState.startHand(players: makePlayers([1000, 1000, 1000]),
+                                        dealerIndex: 0, smallBlind: 10, bigBlind: 20,
+                                        seed: 1, handNumber: 1)
+        // Seat 2 was the big blind. Seat 0 is eliminated at this showdown.
+        state.players[0].stack = 0
+        state.results = [HandResult(playerID: "p1", amountWon: 1,
+                                    handName: nil, bestFive: nil)]
+
+        let next = try #require(state.startNextHand(seed: 2))
+
+        #expect(next.players.map(\.id) == ["p1", "p2"])
+        #expect(next.players[next.dealerIndex].id == "p2")
+        #expect(next.players[0].bet == 20)
+        #expect(next.players[1].bet == 10)
+        #expect(next.currentToAct == 1)
+    }
+
     @Test("stacks carry forward and chips remain conserved")
     func stacksCarryForward() throws {
         var state = GameState.startHand(players: makePlayers([1000, 1000]),
@@ -133,5 +152,28 @@ struct NextHandEligibilityTests {
         #expect(totalChips(next) == 2000)
         #expect(next.players[1].stack + next.players[1].bet == 1010)
         #expect(next.players[0].stack + next.players[0].bet == 990)
+    }
+
+    @Test("the heads-up button and blinds alternate every hand")
+    func headsUpButtonAlternates() throws {
+        var first = GameState.startHand(players: makePlayers([1000, 1000]),
+                                        dealerIndex: 0, smallBlind: 10, bigBlind: 20,
+                                        seed: 1, handNumber: 1)
+        let firstFolded = first.apply(.fold, by: 0)
+        #expect(firstFolded)
+
+        var second = try #require(first.startNextHand(seed: 2))
+        #expect(second.players[second.dealerIndex].id == "p1")
+        #expect(second.players[1].bet == 10)
+        #expect(second.players[0].bet == 20)
+        #expect(second.currentToAct == 1)
+        let secondFolded = second.apply(.fold, by: 1)
+        #expect(secondFolded)
+
+        let third = try #require(second.startNextHand(seed: 3))
+        #expect(third.players[third.dealerIndex].id == "p0")
+        #expect(third.players[0].bet == 10)
+        #expect(third.players[1].bet == 20)
+        #expect(third.currentToAct == 0)
     }
 }

@@ -43,13 +43,15 @@ struct PayloadDurabilityTests {
         }
 
         let accumulatedStack = TableRules.buyInMaximum + 1
+        let matchedContribution = accumulatedStack / 2
         state.players[0].stack = accumulatedStack
         for index in state.players.indices {
             state.players[index].bet = 0
             state.players[index].committed = 0
             state.players[index].status = index == 0 ? .active : .folded
         }
-        state.players[0].committed = accumulatedStack
+        state.players[0].committed = matchedContribution
+        state.players[1].committed = matchedContribution
         state.results = [
             HandResult(playerID: state.players[0].id, amountWon: accumulatedStack,
                        handName: nil, bestFive: nil),
@@ -63,6 +65,51 @@ struct PayloadDurabilityTests {
         let settled = try decodedGame(from: settledWire)
         #expect(settled.players[0].stack == accumulatedStack)
         #expect(settled.results?.first?.amountWon == accumulatedStack)
+    }
+
+    @Test("equivalent best-five card choices remain wire compatible")
+    func equivalentBestFiveChoicesRemainCompatible() throws {
+        var state = GameState.startHand(
+            players: makePlayers([1_000, 1_000]), dealerIndex: 0,
+            smallBlind: 10, bigBlind: 20, seed: 1, handNumber: 1,
+            tableID: "table-alternate-best-five"
+        )
+        state.players[0].holeCards = cards("Ah As")
+        state.players[1].holeCards = cards("Kc Qc")
+        state.board = cards("Ad Ac Kh Kd 2s")
+        let visible = Set(state.players.flatMap(\.holeCards) + state.board)
+        state.deck = Card.fullDeck.filter { !visible.contains($0) }
+        for index in state.players.indices {
+            state.players[index].bet = 0
+            state.players[index].committed = 100
+            state.players[index].lastActionBet = nil
+            state.players[index].status = .active
+            state.players[index].stack = index == 0 ? 1_100 : 900
+        }
+        state.street = .showdown
+        state.currentToAct = nil
+        state.minRaise = 0
+        state.turnStartedAt = nil
+
+        let rank = HandEvaluator.evaluate(state.players[0].holeCards + state.board)
+        let canonicalKing = try #require(rank.bestFive.first { $0.rank == .king })
+        let alternateKing = try #require(
+            state.board.first { $0.rank == .king && $0 != canonicalKing }
+        )
+        var alternate = rank.bestFive
+        alternate[try #require(alternate.firstIndex(of: canonicalKing))] = alternateKing
+        #expect(Set(alternate) != Set(rank.bestFive))
+        #expect(HandEvaluator.evaluate(alternate) == rank)
+
+        state.results = [
+            HandResult(
+                playerID: state.players[0].id, amountWon: 200,
+                handName: rank.name, bestFive: alternate
+            ),
+        ]
+
+        let decoded = try decodedGame(from: encodedGame(state))
+        #expect(decoded.results?.first?.bestFive == alternate)
     }
 
     @Test("payloads reject unrecoverable poker state")

@@ -86,13 +86,29 @@ public struct Lobby: Codable, Sendable, Equatable {
                 forKey: .seats, in: container,
                 debugDescription: "Lobby player limits are invalid")
         }
+        let wireVersion = try container.decodeIfPresent(Int.self, forKey: .version)
+        let wireSmallBlind = try container.decode(Int.self, forKey: .smallBlind)
+        let wireBigBlind = try container.decode(Int.self, forKey: .bigBlind)
+        let wireStartingStack = try container.decode(Int.self, forKey: .startingStack)
+        if (decoder.userInfo[GamePayload.wireVersionKey] as? Int ?? 2) >= 2 {
+            let blinds = TableRules.normalizedBlinds(
+                smallBlind: wireSmallBlind, bigBlind: wireBigBlind)
+            guard wireVersion.map({ $0 >= 0 }) == true,
+                  blinds.smallBlind == wireSmallBlind,
+                  blinds.bigBlind == wireBigBlind,
+                  (1...TableRules.buyInMaximum).contains(wireStartingStack) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: container.codingPath,
+                          debugDescription: "Lobby numeric fields are not canonical"))
+            }
+        }
         self.init(
             tableID: tableID,
-            version: try container.decodeIfPresent(Int.self, forKey: .version) ?? 0,
+            version: wireVersion ?? 0,
             maxPlayers: maxPlayers,
-            smallBlind: try container.decode(Int.self, forKey: .smallBlind),
-            bigBlind: try container.decode(Int.self, forKey: .bigBlind),
-            startingStack: try container.decode(Int.self, forKey: .startingStack), seats: seats)
+            smallBlind: wireSmallBlind,
+            bigBlind: wireBigBlind,
+            startingStack: wireStartingStack, seats: seats)
     }
 }
 

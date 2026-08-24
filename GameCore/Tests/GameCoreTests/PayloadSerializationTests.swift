@@ -21,7 +21,8 @@ struct PayloadSerializationTests {
         #expect(decoded == state)
         #expect(encodedObject["currentBet"] == nil)
         #expect(encodedObject["pot"] as? Int == 0)
-        #expect(envelope["wireVersion"] as? Int == 1)
+        #expect(envelope["wireVersion"] as? Int == 2)
+        #expect((envelope["integrity"] as? String)?.count == 64)
         #expect(envelope["game"] != nil)
         #expect(envelope["lobby"] == nil)
     }
@@ -85,6 +86,80 @@ struct PayloadSerializationTests {
         }
     }
 
+    @Test("decode outcomes classify recovery-safe transport failures")
+    func decodeOutcomesClassifyFailures() {
+        #expect(GamePayload.decodeOutcome(from: "") == .rejected(.empty))
+        #expect(GamePayload.decodeOutcome(from: "not+padded=") == .rejected(.malformedEncoding))
+        #expect(
+            GamePayload.decodeOutcome(from: String(
+                repeating: "A", count: GamePayload.maximumEncodedPayloadLength + 1
+            )) == .rejected(.transportTooLarge)
+        )
+    }
+
+    @Test("current payload integrity rejects modified state")
+    func integrityRejectsModifiedState() throws {
+        let lobby = Lobby(tableID: "table-123")
+            .fixtureSeat(id: "a", name: "Alice", avatar: "A")
+        var object = try #require(
+            JSONSerialization.jsonObject(
+                with: GamePayload.encoder.encode(TableMessage.lobby(lobby))
+            ) as? [String: Any]
+        )
+        var wrapper = try #require(object["lobby"] as? [String: Any])
+        var state = try #require(wrapper["_0"] as? [String: Any])
+        state["version"] = lobby.version + 1
+        wrapper["_0"] = state
+        object["lobby"] = wrapper
+
+        let wire = try encodedWireObject(object)
+        #expect(GamePayload.decodeOutcome(from: wire) == .rejected(.integrityMismatch))
+        #expect(throws: DecodingError.self) {
+            _ = try GamePayload.decodeMessage(from: wire)
+        }
+        #expect(throws: DecodingError.self) {
+            _ = try GamePayload.decoder.decode(
+                TableMessage.self,
+                from: JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+            )
+        }
+    }
+
+    @Test("payload envelopes reject unknown fields and malformed wrappers")
+    func strictEnvelopeShape() throws {
+        let message = TableMessage.lobby(Lobby(tableID: "table-123"))
+        var unknownRoot = try #require(
+            JSONSerialization.jsonObject(
+                with: GamePayload.encoder.encode(message)
+            ) as? [String: Any]
+        )
+        unknownRoot["unexpected"] = true
+
+        var malformedWrapper = unknownRoot
+        malformedWrapper.removeValue(forKey: "unexpected")
+        malformedWrapper["wireVersion"] = 1
+        malformedWrapper.removeValue(forKey: "integrity")
+        var wrapper = try #require(malformedWrapper["lobby"] as? [String: Any])
+        wrapper["_1"] = wrapper["_0"]
+        malformedWrapper["lobby"] = wrapper
+
+        for object in [unknownRoot, malformedWrapper] {
+            #expect(GamePayload.decodeOutcome(from: try encodedWireObject(object))
+                == .rejected(.invalidShape))
+        }
+    }
+
+    @Test("outbound payloads also enforce the decoded-size budget")
+    func oversizedDecodedOutboundPayloadIsRejected() {
+        var lobby = Lobby(tableID: "table-123")
+        lobby.tableID = String(
+            repeating: "A", count: GamePayload.maximumDecodedPayloadLength + 1
+        )
+        #expect(throws: EncodingError.self) {
+            _ = try GamePayload.encode(.lobby(lobby))
+        }
+    }
+
     @Test("compressed payloads cannot expand beyond the decode budget")
     func compressedExpansionIsBounded() throws {
         let expanded = Data(repeating: 65, count: GamePayload.maximumDecodedPayloadLength + 1)
@@ -106,8 +181,8 @@ struct PayloadSerializationTests {
         #expect(!encoded.contains("="))
     }
 
-    @Test("decoded game states normalize non-negative table numbers")
-    func decodedGameStateNormalizesNonNegativeTableNumbers() throws {
+    @Test("legacy game numbers normalize while current wire rejects them")
+    func legacyGameNumbersNormalizeWhileCurrentWireRejects() throws {
         var state = sixPlayerState()
         state.smallBlind = -5
         state.bigBlind = -10
@@ -116,8 +191,9 @@ struct PayloadSerializationTests {
         state.handNumber = -2
         state.version = -7
 
-        let encoded = try encodedGame(state)
-        let decoded = try decodedGame(from: encoded)
+        #expect(GamePayload.decodeOutcome(from: try encodedGame(state))
+            == .rejected(.invalidState))
+        let decoded = try decodedGame(from: legacyNumericWire(.game(state)))
 
         #expect(decoded.handNumber == 1)
         #expect(decoded.smallBlind == 1)
@@ -128,16 +204,17 @@ struct PayloadSerializationTests {
         #expect(decoded.version == 0)
     }
 
-    @Test("decoded players normalize non-negative chip fields")
-    func decodedPlayersNormalizeNonNegativeChipFields() throws {
+    @Test("legacy player chips normalize while current wire rejects them")
+    func legacyPlayerChipsNormalizeWhileCurrentWireRejects() throws {
         var state = sixPlayerState()
         state.players[0].stack = -100
         state.players[0].bet = -10
         state.players[0].committed = -20
         state.players[0].status = .allIn
 
-        let encoded = try encodedGame(state)
-        let decoded = try decodedGame(from: encoded)
+        #expect(GamePayload.decodeOutcome(from: try encodedGame(state))
+            == .rejected(.invalidState))
+        let decoded = try decodedGame(from: legacyNumericWire(.game(state)))
 
         #expect(decoded.players[0].stack == 0)
         #expect(decoded.players[0].bet == 0)
@@ -249,6 +326,10 @@ struct PayloadSerializationTests {
 
         rejectedPayloads.append(try game { $0.players[0].id = " " })
         rejectedPayloads.append(try game {
+            $0.players[0].id = String(repeating: "p", count: Identity.maximumUTF8Length + 1)
+        })
+        rejectedPayloads.append(try game { $0.players[0].id = "player\u{0}one" })
+        rejectedPayloads.append(try game {
             $0.players[1].id = $0.players[0].id
         })
 
@@ -284,6 +365,21 @@ struct PayloadSerializationTests {
             }
         }
     }
+}
+
+private func encodedWireObject(_ object: [String: Any]) throws -> String {
+    let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+    let compressed = try (data as NSData).compressed(using: .lzfse) as Data
+    return "z" + compressed.base64URLEncodedString()
+}
+
+private func legacyNumericWire(_ message: TableMessage) throws -> String {
+    var object = try #require(
+        JSONSerialization.jsonObject(with: GamePayload.encoder.encode(message))
+            as? [String: Any])
+    object["wireVersion"] = 1
+    object.removeValue(forKey: "integrity")
+    return try encodedWireObject(object)
 }
 
 private func completedSixPlayerState() -> GameState {

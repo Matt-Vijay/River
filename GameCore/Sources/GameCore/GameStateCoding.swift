@@ -1,8 +1,29 @@
 import Foundation
 
+private struct GameStateAnyCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int? = nil
+
+    init?(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { return nil }
+}
+
 extension GameState {
     public init(from decoder: Decoder) throws {
+        let shape = try decoder.container(keyedBy: GameStateAnyCodingKey.self)
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let requiresCanonicalNumbers =
+            (decoder.userInfo[GamePayload.wireVersionKey] as? Int ?? 2) >= 2
+        let allowedKeys: Set<String> = [
+            "tableID", "handNumber", "players", "dealerIndex", "smallBlind", "bigBlind",
+            "board", "deck", "pot", "street", "currentToAct", "minRaise",
+            "turnStartedAt", "turnDuration", "results", "version",
+        ]
+        guard Set(shape.allKeys.map(\.stringValue)).isSubset(of: allowedKeys) else {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: container.codingPath,
+                      debugDescription: "Unknown game state fields"))
+        }
         let tableID = try container.decodeIfPresent(String.self, forKey: .tableID)
             .map {
                 try Identity.decoded(
@@ -17,10 +38,15 @@ extension GameState {
             players.map(\.id),
             codingPath: container.codingPath + [CodingKeys.players]
         )
-        guard players.count <= TableRules.maxPlayers else {
+        guard (TableRules.minPlayers...TableRules.maxPlayers).contains(players.count) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .players, in: container,
-                debugDescription: "Table exceeds the supported player count")
+                debugDescription: "Table has an unsupported player count")
+        }
+        guard players.allSatisfy({ $0.holeCards.isEmpty || $0.holeCards.count == 2 }) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .players, in: container,
+                debugDescription: "Players must have zero or two hole cards")
         }
         let board = try container.decode([Card].self, forKey: .board)
         let deck = try container.decode([Card].self, forKey: .deck)
@@ -43,46 +69,62 @@ extension GameState {
                 forKey: .results, in: container,
                 debugDescription: "A player may have only one result")
         }
-        let visibleCards = Set(players.flatMap(\.holeCards) + board)
-        if let results, results.contains(where: { result in
-            result.bestFive.map { !Set($0).isSubset(of: visibleCards) } ?? false
-        }) {
-            throw DecodingError.dataCorruptedError(
-                forKey: .results,
-                in: container,
-                debugDescription: "Result cards must be visible in the completed hand"
-            )
-        }
+        let wireHandNumber = try container.decode(Int.self, forKey: .handNumber)
+        let wireSmallBlind = try container.decode(Int.self, forKey: .smallBlind)
+        let wireBigBlind = try container.decode(Int.self, forKey: .bigBlind)
         let blinds = TableRules.normalizedBlinds(
-            smallBlind: try container.decode(Int.self, forKey: .smallBlind),
-            bigBlind: try container.decode(Int.self, forKey: .bigBlind)
-        )
+            smallBlind: wireSmallBlind, bigBlind: wireBigBlind)
+        let dealerIndex = try container.decode(Int.self, forKey: .dealerIndex)
+        guard players.indices.contains(dealerIndex) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .dealerIndex, in: container,
+                debugDescription: "Dealer seat is outside the table")
+        }
+        let wireMinRaise = try container.decode(Int.self, forKey: .minRaise)
+        let wireVersion = decoder.userInfo[GamePayload.wireVersionKey] as? Int ?? 2
+        let stateVersion = try container.decodeIfPresent(Int.self, forKey: .version)
+        let wireTurnDuration = try container.decode(TimeInterval.self, forKey: .turnDuration)
+        let wireTurnStartedAt = try container.decodeIfPresent(Date.self, forKey: .turnStartedAt)
+        if requiresCanonicalNumbers {
+            guard wireHandNumber >= 1,
+                  stateVersion.map({ $0 >= 0 }) == true,
+                  blinds.smallBlind == wireSmallBlind,
+                  blinds.bigBlind == wireBigBlind,
+                  (0...TableRules.tableMaximum).contains(wirePot),
+                  wireTurnDuration.isFinite,
+                  wireTurnDuration > 0,
+                  wireTurnDuration <= TurnClock.maximumDuration,
+                  wireTurnStartedAt.map(TurnClock.isSaneWireDate) ?? true,
+                  results == nil
+                    ? (blinds.bigBlind...TableRules.tableMaximum).contains(wireMinRaise)
+                    : wireMinRaise == 0 else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: container.codingPath,
+                          debugDescription: "Game numeric fields are not canonical"))
+            }
+        }
         self = GameState(
             tableID: tableID,
-            handNumber: max(1, try container.decode(Int.self, forKey: .handNumber)),
+            handNumber: max(1, wireHandNumber),
             players: players,
-            dealerIndex: Self.normalizedSeat(
-                try container.decode(Int.self, forKey: .dealerIndex),
-                playerCount: players.count
-            ),
+            dealerIndex: dealerIndex,
             smallBlind: blinds.smallBlind,
             bigBlind: blinds.bigBlind,
             board: board,
             deck: deck,
             street: try container.decode(Street.self, forKey: .street),
             currentToAct: try container.decodeIfPresent(Int.self, forKey: .currentToAct),
-            minRaise: results == nil ? TableRules.table(max(
-                blinds.bigBlind,
-                try container.decode(Int.self, forKey: .minRaise)
-            )) : 0,
-            turnStartedAt: try container.decodeIfPresent(Date.self, forKey: .turnStartedAt),
-            turnDuration: TurnClock.normalized(
-                try container.decode(TimeInterval.self, forKey: .turnDuration)
-            ),
+            minRaise: results == nil
+                ? TableRules.table(max(blinds.bigBlind, wireMinRaise))
+                : 0,
+            turnStartedAt: wireTurnStartedAt,
+            turnDuration: TurnClock.normalized(wireTurnDuration),
             results: results,
-            version: max(0, try container.decode(Int.self, forKey: .version))
+            version: max(0, stateVersion ?? 0)
         )
-        try validateDecodedIntegrity(wirePot: wirePot, codingPath: decoder.codingPath)
+        migrateLegacyResultsIfNeeded(wireVersion: wireVersion)
+        try validateDecodedIntegrity(
+            wirePot: wirePot, wireMinRaise: wireMinRaise, codingPath: decoder.codingPath)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -110,8 +152,43 @@ extension GameState {
 }
 
 private extension GameState {
-    func validateDecodedIntegrity(wirePot: Int, codingPath: [CodingKey]) throws {
+    mutating func migrateLegacyResultsIfNeeded(wireVersion: Int) {
+        guard wireVersion < 2, results != nil else { return }
+
+        // Early River payloads counted a one-contributor layer as winnings.
+        // Correct settlement treats it as an uncalled refund. The winner's stack
+        // was already the same either way, so rebuild presentation metadata while
+        // retaining the historical chip stacks and contributions.
+        let ranks = contenders.count > 1 ? showdownRanks() : [:]
+        let winnings = settlement(ranks: ranks).winnings
+        results = players.indices.compactMap { index in
+            let playerID = players[index].id
+            guard let amount = winnings[playerID], amount > 0 else { return nil }
+            return HandResult(
+                playerID: playerID,
+                amountWon: amount,
+                handName: ranks[index]?.name,
+                bestFive: ranks[index]?.bestFive
+            )
+        }
+    }
+
+    func validateDecodedIntegrity(
+        wirePot: Int, wireMinRaise: Int, codingPath: [CodingKey]
+    ) throws {
         let contenders = players.filter(\.isContesting)
+        guard players.allSatisfy({ player in
+            switch player.status {
+            case .active, .folded, .allIn:
+                player.holeCards.count == 2
+            case .sittingOut:
+                results != nil || player.holeCards.isEmpty
+            case .eliminated:
+                player.holeCards.isEmpty
+            }
+        }) else {
+            throw corrupted("Player status does not match dealt cards", codingPath: codingPath)
+        }
         if let results {
             guard !results.isEmpty else {
                 throw corrupted("Completed hand requires a positive award", codingPath: codingPath)
@@ -120,6 +197,7 @@ private extension GameState {
                   currentToAct == nil,
                   turnStartedAt == nil,
                   wirePot == 0,
+                  wireMinRaise == 0,
                   players.allSatisfy({ $0.bet == 0 && $0.lastActionBet == nil }) else {
                 throw corrupted("Completed hand contains live betting state", codingPath: codingPath)
             }
@@ -161,9 +239,14 @@ private extension GameState {
                 )
                 guard results.allSatisfy({ result in
                     guard let index = playerIndexes[result.playerID],
-                          let rank = ranks[index] else { return false }
+                          let rank = ranks[index],
+                          let reportedCards = result.bestFive,
+                          Set(reportedCards).isSubset(
+                            of: Set(players[index].holeCards + board)
+                          ) else { return false }
+                    let reportedRank = HandEvaluator.evaluate(reportedCards)
                     return result.handName == rank.name
-                        && Set(result.bestFive ?? []) == Set(rank.bestFive)
+                        && reportedRank == rank
                 }) else {
                     throw corrupted("Result hand details do not match poker hands", codingPath: codingPath)
                 }

@@ -14,6 +14,7 @@ struct BettingRaiseTests {
         #expect(s.players[1].lastActionBet == nil)
         let legal = s.legalActions(for: 1)
         #expect(legal.callAmount == 40)       // BB already has 20 in
+        #expect(legal.raiseBounds?.lowerBound == 100) // preserve the 40-chip increment
     }
 
     @Test("a short all-in raise does not reopen raising")
@@ -52,6 +53,8 @@ struct BettingRaiseTests {
         checked.players[1].status = .allIn
         checked.players[2].bet = 0
         checked.players[2].status = .folded
+        checked.board = checked.deck.dealTopIfAvailable(3)
+        checked.street = .flop
         checked.currentToAct = 0
         checked.minRaise = 20
 
@@ -81,7 +84,7 @@ struct BettingRaiseTests {
 
         let fullThreshold = stateAfterCumulativeShortRaises(finalStack: 100)
         #expect(fullThreshold.currentToAct == 3)
-        #expect(fullThreshold.legalActions(for: 3).raiseBounds != nil)
+        #expect(fullThreshold.legalActions(for: 3).raiseBounds?.lowerBound == 140)
     }
 
     @Test("a below-minimum raise is rejected")

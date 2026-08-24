@@ -239,8 +239,11 @@ extension GameState {
         players[index].lastAction = .fold
         if isCurrentPlayer(at: index) {
             advance(now: now)
-        } else if contenders.count <= 1 {
-            awardUncontested()
+        } else if players.lazy.filter(\.canAct).count <= 1 {
+            // A leave can remove the final opponent who still had chips. If
+            // the remaining active player has nothing to call, run the board
+            // immediately; otherwise `advance` keeps that player on turn.
+            advance(now: now)
         }
         return true
     }
