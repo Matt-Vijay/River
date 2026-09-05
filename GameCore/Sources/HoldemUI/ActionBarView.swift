@@ -83,17 +83,8 @@ struct ActionBarView: View {
                 .frame(minWidth: destructive ? 68 : nil,
                        maxWidth: destructive ? nil : .infinity)
                 .frame(minHeight: Theme.Metrics.actionControlHeight)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Metrics.controlCorner)
-                        .fill(destructive ? Theme.dangerBackground : Theme.controlBackground)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: Theme.Metrics.controlCorner)
-                                .stroke(
-                                    destructive ? Theme.dangerStroke : Theme.controlStroke,
-                                    lineWidth: 1
-                                )
-                        }
-                )
+                .controlSurface(fill: destructive ? Theme.dangerBackground : Theme.controlBackground,
+                                stroke: destructive ? Theme.dangerStroke : Theme.controlStroke)
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityIdentifier(accessibilityID)

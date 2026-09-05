@@ -81,7 +81,6 @@ struct LegacyWireCorpusTests {
             #expect(first.revision == second.revision)
             #expect(first.revision.tableID == fixture.tableID)
             #expect(first.revision.version == fixture.revision)
-            #expect(GamePayload.decodeOutcome(from: fixture.wire) == .decoded(first))
 
             let currentWire = try GamePayload.encode(first)
             #expect(currentWire.utf8.count <= GamePayload.maximumEncodedPayloadLength)

@@ -14,7 +14,6 @@ struct ProfileStoreTests {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let store = ProfileStore(defaults: defaults)
-        let originalPlayerID = store.playerID(seed: UUID().uuidString)
         #expect(store.configuredProfile == nil)
         store.save(PlayerProfile(name: "  Maverick  ", avatar: "Ace")!)
 
@@ -24,11 +23,6 @@ struct ProfileStoreTests {
 
         let reset = ProfileStore(defaults: defaults, resetProfile: true)
         #expect(reset.configuredProfile == nil)
-        #expect(reset.playerID(seed: UUID().uuidString) == originalPlayerID)
-
-        let replacementPlayerID = UUID().uuidString
-        defaults.set("malformed", forKey: "holdem.player.id.v1")
-        #expect(reset.playerID(seed: replacementPlayerID) == replacementPlayerID)
     }
 
     @MainActor

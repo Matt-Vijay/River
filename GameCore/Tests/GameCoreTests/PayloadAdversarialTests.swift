@@ -5,12 +5,6 @@ import Testing
 
 @Suite("Adversarial payload verification")
 struct PayloadAdversarialTests {
-    private struct OutcomeCase {
-        let name: String
-        let wire: String
-        let failure: GamePayload.DecodeFailure
-    }
-
     @Test("canonical base64url is accepted and noncanonical transports are rejected")
     func canonicalBase64URLOnly() throws {
         let message = TableMessage.lobby(Lobby(tableID: "transport-table"))
@@ -18,12 +12,13 @@ struct PayloadAdversarialTests {
         let canonicalRaw = raw.base64URLEncodedString()
         let canonicalCompressed = try GamePayload.encode(message)
 
-        #expect(GamePayload.decodeOutcome(from: canonicalRaw) == .decoded(message))
-        #expect(GamePayload.decodeOutcome(from: canonicalCompressed) == .decoded(message))
+        #expect(try GamePayload.decodeMessage(from: canonicalRaw) == message)
+        #expect(try GamePayload.decodeMessage(from: canonicalCompressed) == message)
         #expect(!canonicalRaw.contains("="))
         #expect(!canonicalCompressed.contains(where: { "+/=".contains($0) }))
 
         let rejected = [
+            "",                 // empty transport
             canonicalRaw + "=", // padding is valid base64, but not canonical base64url
             "+w",               // standard base64 alphabet
             "%2Fw",             // percent-encoded transport text
@@ -34,10 +29,7 @@ struct PayloadAdversarialTests {
             "z",                // compressed marker without a body
         ]
         for wire in rejected {
-            #expect(
-                GamePayload.decodeOutcome(from: wire) == .rejected(.malformedEncoding),
-                "unexpected classification for \(String(reflecting: wire))"
-            )
+            expectInvalidPayload(wire)
         }
     }
 
@@ -48,29 +40,21 @@ struct PayloadAdversarialTests {
         #expect(compressed.count > 4)
 
         let malformed = [
-            ("invalid bytes", "zAA"),
-            ("empty stream", try compressedWire(Data())),
-            ("one-byte prefix", try compressedWire(Data(compressed.prefix(1)))),
-            ("half stream", try compressedWire(Data(compressed.prefix(compressed.count / 2)))),
-            ("missing trailer", try compressedWire(Data(compressed.dropLast()))),
+            "zAA",
+            try compressedWire(Data()),
+            "z" + compressed.prefix(1).base64URLEncodedString(),
+            "z" + compressed.prefix(compressed.count / 2).base64URLEncodedString(),
+            "z" + compressed.dropLast().base64URLEncodedString(),
         ]
-        for (name, wire) in malformed {
-            let outcome = GamePayload.decodeOutcome(from: wire)
-            let failedClosed = switch outcome {
-            case .rejected(.invalidCompression), .rejected(.invalidShape): true
-            default: false
-            }
-            #expect(failedClosed, "truncated LZFSE did not fail closed: \(name)")
-            #expect(GamePayload.decodeOutcome(from: wire) == outcome)
+        for wire in malformed {
+            expectInvalidPayload(wire)
         }
 
         let atCeiling = Data(repeating: 0x20, count: GamePayload.maximumDecodedPayloadLength)
         let overCeiling = Data(
             repeating: 0x20, count: GamePayload.maximumDecodedPayloadLength + 1)
-        #expect(GamePayload.decodeOutcome(from: try compressedWire(atCeiling))
-            == .rejected(.invalidShape))
-        #expect(GamePayload.decodeOutcome(from: try compressedWire(overCeiling))
-            == .rejected(.decodedTooLarge))
+        expectInvalidPayload(try compressedWire(atCeiling))
+        expectInvalidPayload(try compressedWire(overCeiling))
     }
 
     @Test("generated JSON inputs enforce every structural budget")
@@ -97,8 +81,7 @@ struct PayloadAdversarialTests {
             #"{"unterminated":true"#,                             // malformed JSON
         ]
         for json in rejectedJSON {
-            #expect(GamePayload.decodeOutcome(from: try compressedWire(Data(json.utf8)))
-                == .rejected(.invalidShape))
+            expectInvalidPayload(try compressedWire(Data(json.utf8)))
         }
     }
 
@@ -117,11 +100,9 @@ struct PayloadAdversarialTests {
         unknown["unexpected"] = true
 
         for duplicate in duplicateEnvelopes {
-            #expect(GamePayload.decodeOutcome(from: try compressedWire(Data(duplicate.utf8)))
-                == .rejected(.invalidShape))
+            expectInvalidPayload(try compressedWire(Data(duplicate.utf8)))
         }
-        #expect(GamePayload.decodeOutcome(from: try objectWire(unknown))
-            == .rejected(.invalidShape))
+        expectInvalidPayload(try objectWire(unknown))
     }
 
     @Test("control and oversized wire identities never normalize into authority")
@@ -136,8 +117,7 @@ struct PayloadAdversarialTests {
         for identity in invalidIdentities {
             var tableObject = try legacyEnvelopeObject(for: .lobby(base))
             try mutateLobby(in: &tableObject) { $0["tableID"] = identity }
-            #expect(GamePayload.decodeOutcome(from: try objectWire(tableObject))
-                == .rejected(.invalidState))
+            expectInvalidPayload(try objectWire(tableObject))
 
             var seatObject = try legacyEnvelopeObject(for: .lobby(base))
             try mutateLobby(in: &seatObject) { lobby in
@@ -145,8 +125,7 @@ struct PayloadAdversarialTests {
                 seats[0]["id"] = identity
                 lobby["seats"] = seats
             }
-            #expect(GamePayload.decodeOutcome(from: try objectWire(seatObject))
-                == .rejected(.invalidState))
+            expectInvalidPayload(try objectWire(seatObject))
         }
     }
 
@@ -169,57 +148,6 @@ struct PayloadAdversarialTests {
             let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
             #expect(throws: DecodingError.self) {
                 _ = try JSONDecoder().decode(TableRevision.self, from: data)
-            }
-        }
-    }
-
-    @Test("DecodeFailure classification is stable across all rejection families")
-    func deterministicFailureClassification() throws {
-        var future = try envelopeObject(for: .lobby(Lobby(tableID: "future-table")))
-        future["wireVersion"] = 3
-
-        var corruptIntegrity = try envelopeObject(
-            for: .lobby(Lobby(tableID: "integrity-table")))
-        corruptIntegrity["integrity"] = String(repeating: "0", count: 64)
-
-        var invalidState = try legacyEnvelopeObject(
-            for: .lobby(Lobby(tableID: "state-table")))
-        try mutateLobby(in: &invalidState) { $0["maxPlayers"] = 99 }
-
-        let cases = [
-            OutcomeCase(name: "empty", wire: "", failure: .empty),
-            OutcomeCase(
-                name: "transport", wire: String(
-                    repeating: "A", count: GamePayload.maximumEncodedPayloadLength + 1),
-                failure: .transportTooLarge),
-            OutcomeCase(name: "encoding", wire: "AA==", failure: .malformedEncoding),
-            OutcomeCase(name: "compression", wire: "zAA", failure: .invalidCompression),
-            OutcomeCase(
-                name: "expansion",
-                wire: try compressedWire(Data(
-                    repeating: 0x41, count: GamePayload.maximumDecodedPayloadLength + 1)),
-                failure: .decodedTooLarge),
-            OutcomeCase(
-                name: "shape", wire: try compressedWire(Data("[]".utf8)),
-                failure: .invalidShape),
-            OutcomeCase(
-                name: "version", wire: try objectWire(future),
-                failure: .unsupportedVersion),
-            OutcomeCase(
-                name: "integrity", wire: try objectWire(corruptIntegrity),
-                failure: .integrityMismatch),
-            OutcomeCase(
-                name: "state", wire: try objectWire(invalidState),
-                failure: .invalidState),
-        ]
-
-        for testCase in cases {
-            let expected = GamePayload.DecodeOutcome.rejected(testCase.failure)
-            for _ in 0..<3 {
-                #expect(
-                    GamePayload.decodeOutcome(from: testCase.wire) == expected,
-                    "unstable DecodeFailure for \(testCase.name)"
-                )
             }
         }
     }

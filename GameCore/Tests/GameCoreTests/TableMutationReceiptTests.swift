@@ -54,6 +54,10 @@ struct TableMutationReceiptTests {
 
         let encoded = try receipt.encoded()
         let decoded = try TableMutationReceipt.decode(from: encoded)
+        let encodedString = try receipt.encodedString()
+        #expect(try TableMutationReceipt.decode(from: encodedString) == receipt)
+        #expect((try? TableMutationReceipt.decode(from: encodedString + "=")) == nil)
+        #expect((try? TableMutationReceipt.decode(from: String(repeating: "A", count: 1_368))) == nil)
         #expect(joined.seats.map(\.id) == ["alice"])
         #expect(decoded == receipt)
         #expect(decoded.actorID == "alice")
@@ -67,8 +71,7 @@ struct TableMutationReceiptTests {
         #expect(decoded.parentFingerprint != decoded.resultFingerprint)
         #expect(decoded.matchesResult(result))
         #expect(!decoded.matchesResult(predecessor))
-        #expect(decoded.verifying(predecessor: predecessor, authenticatedActor: actor)
-                == .verified(result))
+        #expect(decoded.replay(predecessor: predecessor, authenticatedActor: actor) == result)
         #expect(encoded.count == 515)
 
         // The receipt is separate: both frozen legacy input and ordinary state
@@ -100,8 +103,7 @@ struct TableMutationReceiptTests {
         let decodedStart = try TableMutationReceipt.decode(from: startReceipt.encoded())
         #expect(decodedStart.parentRevision.phase == .lobby)
         #expect(decodedStart.resultRevision.phase == .game)
-        #expect(decodedStart.verifying(predecessor: lobby, authenticatedActor: host)
-                == .verified(game))
+        #expect(decodedStart.replay(predecessor: lobby, authenticatedActor: host) == game)
 
         guard case .game(let state) = game,
               let actorIndex = state.currentToAct,
@@ -117,8 +119,7 @@ struct TableMutationReceiptTests {
             return
         }
         let decodedAction = try TableMutationReceipt.decode(from: actionReceipt.encoded())
-        #expect(decodedAction.verifying(predecessor: game, authenticatedActor: actor)
-                == .verified(acted))
+        #expect(decodedAction.replay(predecessor: game, authenticatedActor: actor) == acted)
     }
 
     @Test("replay rejects wrong actor, table, parent, operation outcome, and result")
@@ -137,13 +138,11 @@ struct TableMutationReceiptTests {
             return
         }
 
-        #expect(receipt.verifying(predecessor: predecessor, authenticatedActor: bob)
-                == .rejected(.wrongActor))
-        #expect(receipt.verifying(
+        #expect(receipt.replay(predecessor: predecessor, authenticatedActor: bob) == nil)
+        #expect(receipt.replay(
             predecessor: .lobby(Lobby(tableID: "other-table")), authenticatedActor: alice
-        ) == .rejected(.wrongTable))
-        #expect(receipt.verifying(predecessor: bobJoined, authenticatedActor: alice)
-                == .rejected(.wrongParent))
+        ) == nil)
+        #expect(receipt.replay(predecessor: bobJoined, authenticatedActor: alice) == nil)
 
         let falseResult = try #require(TableMutationReceipt(
             actor: alice,
@@ -152,8 +151,7 @@ struct TableMutationReceiptTests {
             appliedAt: now,
             claimedResult: bobJoined
         ))
-        #expect(falseResult.verifying(predecessor: predecessor, authenticatedActor: alice)
-                == .rejected(.wrongResult))
+        #expect(falseResult.replay(predecessor: predecessor, authenticatedActor: alice) == nil)
 
         let rejectedOperation = try #require(TableMutationReceipt(
             actor: alice,
@@ -162,9 +160,9 @@ struct TableMutationReceiptTests {
             appliedAt: now,
             claimedResult: aliceJoined
         ))
-        #expect(rejectedOperation.verifying(
+        #expect(rejectedOperation.replay(
             predecessor: predecessor, authenticatedActor: alice
-        ) == .rejected(.operationRejected(.notSeated)))
+        ) == nil)
 
         guard case .applied(let secondJoin) = aliceJoined.committing(
             .joinLobby(name: "Bob", avatar: "B"), actor: bob, now: now
@@ -179,9 +177,9 @@ struct TableMutationReceiptTests {
             appliedAt: now,
             claimedResult: secondJoin
         ))
-        #expect(unchangedOperation.verifying(
+        #expect(unchangedOperation.replay(
             predecessor: aliceJoined, authenticatedActor: alice
-        ) == .rejected(.operationUnchanged))
+        ) == nil)
     }
 
     @Test("all protected fields, noncanonical bytes, and oversized inputs are rejected")
@@ -221,19 +219,10 @@ struct TableMutationReceiptTests {
             var object = original
             try mutate(&object)
             let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
-            do {
-                _ = try TableMutationReceipt.decode(from: data)
-                Issue.record("accepted tampered \(label) field")
-            } catch {
-                // Every mutation must fail either semantic/integrity validation
-                // or canonical-byte validation.
-            }
+            #expect((try? TableMutationReceipt.decode(from: data)) == nil, "tampered \(label)")
         }
 
-        do {
-            _ = try TableMutationReceipt.decode(from: encoded + Data([0x20]))
-            Issue.record("accepted noncanonical trailing whitespace")
-        } catch {}
+        #expect((try? TableMutationReceipt.decode(from: encoded + Data([0x20]))) == nil)
         #expect(throws: TableMutationReceipt.CodingFailure.self) {
             _ = try TableMutationReceipt.decode(from: Data())
         }

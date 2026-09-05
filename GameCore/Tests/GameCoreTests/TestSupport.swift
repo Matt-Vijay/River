@@ -3,6 +3,10 @@ import Testing
 
 @testable import GameCore
 
+func expectInvalidPayload(_ wire: String, sourceLocation: SourceLocation = #_sourceLocation) {
+  #expect((try? GamePayload.decodeMessage(from: wire)) == nil, sourceLocation: sourceLocation)
+}
+
 extension GameState {
   @discardableResult
   mutating func apply(

@@ -127,59 +127,38 @@ extension Lobby {
 
     public func seat(id: String) -> LobbySeat? { seats.first { $0.id == id } }
 
-    private func game(seed: UInt64, turnDuration: TimeInterval, now: Date) -> GameState {
-        let players = seats.map {
-            Player(id: $0.id, name: $0.name, avatar: $0.avatar, stack: startingStack)
-        }
-        return GameState.startHand(
-            players: players, dealerIndex: 0, smallBlind: smallBlind, bigBlind: bigBlind,
-            seed: seed, handNumber: 1, tableID: tableID,
-            turnDuration: turnDuration, now: now)
-    }
-
-    private func revised(with seats: [LobbySeat]) -> Lobby? {
-        guard let version = MonotonicCounter.successor(of: version) else { return nil }
-        var next = self
-        next.seats = seats
-        next.version = version
-        return next
-    }
-
     func applying(_ kind: TableOperation, actorID: String, now: Date) -> TableOperationResult {
+        var next = self
         switch kind {
         case .joinLobby(let name, let avatar):
-            return joiningLobby(actorID: actorID, name: name, avatar: avatar)
+            guard seat(id: actorID) == nil else { return .unchanged }
+            guard !isFull else { return .rejected(.tableFull) }
+            next.seats.append(LobbySeat(id: actorID, name: name, avatar: avatar))
         case .startGame(let seed, let duration):
             guard seat(id: actorID) != nil else { return .rejected(.notSeated) }
             guard seats.count >= 2 else { return .rejected(.illegalAction) }
             guard MonotonicCounter.successor(of: version) != nil else {
                 return .rejected(.illegalAction)
             }
-            return .applied(.game(game(seed: seed, turnDuration: duration, now: now)))
+            let players = seats.map {
+                Player(id: $0.id, name: $0.name, avatar: $0.avatar, stack: startingStack)
+            }
+            return .applied(.game(GameState.startHand(
+                players: players, dealerIndex: 0, smallBlind: smallBlind, bigBlind: bigBlind,
+                seed: seed, handNumber: 1, tableID: tableID,
+                turnDuration: duration, now: now)))
         case .leaveLobby:
-            return leavingLobby(actorID: actorID)
-        default: return .rejected(.wrongPhase)
+            guard let index = seats.firstIndex(where: { $0.id == actorID }) else {
+                return .rejected(.notSeated)
+            }
+            next.seats.remove(at: index)
+        default:
+            return .rejected(.wrongPhase)
         }
-    }
-
-    private func joiningLobby(actorID: String, name: String, avatar: String) -> TableOperationResult
-    {
-        guard seat(id: actorID) == nil else { return .unchanged }
-        guard !isFull else { return .rejected(.tableFull) }
-        let seats = seats + [LobbySeat(id: actorID, name: name, avatar: avatar)]
-        guard let next = revised(with: seats) else { return .rejected(.illegalAction) }
-        return .applied(.lobby(next))
-    }
-
-    private func leavingLobby(actorID: String) -> TableOperationResult {
-        guard let index = seats.firstIndex(where: { $0.id == actorID }) else {
-            return .rejected(.notSeated)
-        }
-        var seats = seats
-        seats.remove(at: index)
-        guard let next = revised(with: seats) else {
+        guard let version = MonotonicCounter.successor(of: version) else {
             return .rejected(.illegalAction)
         }
+        next.version = version
         return .applied(.lobby(next))
     }
 }

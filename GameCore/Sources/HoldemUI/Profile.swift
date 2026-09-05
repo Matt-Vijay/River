@@ -129,7 +129,6 @@ enum CharacterAvatars {
 public struct ProfileStore {
     private let defaults: UserDefaults
     private static let profileKey = "holdem.profile"
-    private static let playerIDKey = "holdem.player.id.v1"
 
     public init(resetProfile: Bool = false) {
         self.init(defaults: UserDefaults(suiteName: "group.com.dewylabs.river") ?? .standard,
@@ -157,17 +156,5 @@ public struct ProfileStore {
     public func save(_ profile: PlayerProfile) {
         defaults.set(["name": profile.name, "avatar": profile.avatar],
                      forKey: Self.profileKey)
-    }
-
-    /// Stable across launches so existing table seats remain addressable.
-    public func playerID(seed: String) -> String {
-        if let stored = defaults.string(forKey: Self.playerIDKey),
-           let id = UUID(uuidString: stored) {
-            return id.uuidString
-        }
-
-        let id = UUID(uuidString: seed)?.uuidString ?? UUID().uuidString
-        defaults.set(id, forKey: Self.playerIDKey)
-        return id
     }
 }

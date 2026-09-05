@@ -86,17 +86,6 @@ struct PayloadSerializationTests {
         }
     }
 
-    @Test("decode outcomes classify recovery-safe transport failures")
-    func decodeOutcomesClassifyFailures() {
-        #expect(GamePayload.decodeOutcome(from: "") == .rejected(.empty))
-        #expect(GamePayload.decodeOutcome(from: "not+padded=") == .rejected(.malformedEncoding))
-        #expect(
-            GamePayload.decodeOutcome(from: String(
-                repeating: "A", count: GamePayload.maximumEncodedPayloadLength + 1
-            )) == .rejected(.transportTooLarge)
-        )
-    }
-
     @Test("current payload integrity rejects modified state")
     func integrityRejectsModifiedState() throws {
         let lobby = Lobby(tableID: "table-123")
@@ -113,7 +102,6 @@ struct PayloadSerializationTests {
         object["lobby"] = wrapper
 
         let wire = try encodedWireObject(object)
-        #expect(GamePayload.decodeOutcome(from: wire) == .rejected(.integrityMismatch))
         #expect(throws: DecodingError.self) {
             _ = try GamePayload.decodeMessage(from: wire)
         }
@@ -144,8 +132,7 @@ struct PayloadSerializationTests {
         malformedWrapper["lobby"] = wrapper
 
         for object in [unknownRoot, malformedWrapper] {
-            #expect(GamePayload.decodeOutcome(from: try encodedWireObject(object))
-                == .rejected(.invalidShape))
+            expectInvalidPayload(try encodedWireObject(object))
         }
     }
 
@@ -191,8 +178,7 @@ struct PayloadSerializationTests {
         state.handNumber = -2
         state.version = -7
 
-        #expect(GamePayload.decodeOutcome(from: try encodedGame(state))
-            == .rejected(.invalidState))
+        expectInvalidPayload(try encodedGame(state))
         let decoded = try decodedGame(from: legacyNumericWire(.game(state)))
 
         #expect(decoded.handNumber == 1)
@@ -212,8 +198,7 @@ struct PayloadSerializationTests {
         state.players[0].committed = -20
         state.players[0].status = .allIn
 
-        #expect(GamePayload.decodeOutcome(from: try encodedGame(state))
-            == .rejected(.invalidState))
+        expectInvalidPayload(try encodedGame(state))
         let decoded = try decodedGame(from: legacyNumericWire(.game(state)))
 
         #expect(decoded.players[0].stack == 0)

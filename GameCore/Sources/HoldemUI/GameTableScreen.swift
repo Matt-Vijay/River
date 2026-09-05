@@ -181,5 +181,4 @@ public struct GameTableScreen: View {
               ) else { return table }
         return joined
     }
-
 }

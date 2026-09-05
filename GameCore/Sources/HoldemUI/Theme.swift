@@ -41,10 +41,11 @@ struct PressableButtonStyle: ButtonStyle {
 }
 
 extension View {
-    func controlSurface(stroke: Color = Theme.controlStroke) -> some View {
+    func controlSurface(fill: Color = Theme.controlBackground,
+                        stroke: Color = Theme.controlStroke) -> some View {
         background(
             RoundedRectangle(cornerRadius: Theme.Metrics.controlCorner)
-                .fill(Theme.controlBackground)
+                .fill(fill)
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.Metrics.controlCorner)
                         .stroke(stroke, lineWidth: 1)

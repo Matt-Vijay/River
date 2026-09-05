@@ -5,20 +5,21 @@ import Foundation
 /// outside `TableMessage` so old state payloads remain unchanged and receipt
 /// data never gains authority merely by being received.
 public struct TableMutationReceipt: Codable, Sendable, Equatable {
+    private enum CodingKeys: String, CodingKey { case body = "b", integrity = "h" }
+
     public static let maximumEncodedLength = 1_024
     private static let currentVersion = 1
 
-    public struct StateReference: Codable, Sendable, Equatable {
+    private struct StateReference: Codable, Sendable, Equatable {
         private enum CodingKeys: String, CodingKey { case revision = "r", fingerprint = "f" }
 
-        public let revision: TableRevision
-        public let fingerprint: String
+        let revision: TableRevision
+        let fingerprint: String
 
         fileprivate init?(_ message: TableMessage) {
-            let fingerprint = GamePayload.stateFingerprint(for: message)
-            guard Self.isFingerprint(fingerprint) else { return nil }
             revision = message.revision
-            self.fingerprint = fingerprint
+            guard Self.isFingerprint(revision.branch) else { return nil }
+            fingerprint = revision.branch
         }
 
         fileprivate var isValid: Bool {
@@ -27,7 +28,7 @@ public struct TableMutationReceipt: Codable, Sendable, Equatable {
 
         fileprivate func matches(_ message: TableMessage) -> Bool {
             revision == message.revision
-                && fingerprint == GamePayload.stateFingerprint(for: message)
+                && fingerprint == revision.branch
         }
 
         private static func isFingerprint(_ value: String) -> Bool {
@@ -51,19 +52,11 @@ public struct TableMutationReceipt: Codable, Sendable, Equatable {
         let result: StateReference
     }
 
-    private struct Wire: Codable {
-        private enum CodingKeys: String, CodingKey { case body = "b", integrity = "h" }
-        let body: Body
-        let integrity: String
-    }
-
     private let body: Body
     private let integrity: String
 
     public var actorID: String { body.actorID }
-    public var parent: StateReference { body.parent }
     public var operation: TableOperation { body.operation }
-    public var result: StateReference { body.result }
     public var parentRevision: TableRevision { body.parent.revision }
     public var resultRevision: TableRevision { body.result.revision }
     public var parentFingerprint: String { body.parent.fingerprint }
@@ -103,20 +96,37 @@ public struct TableMutationReceipt: Codable, Sendable, Equatable {
     }
 
     public init(from decoder: Decoder) throws {
-        let wire = try Wire(from: decoder)
-        guard Self.isValid(wire) else { throw CodingFailure.invalidPayload }
-        body = wire.body
-        integrity = wire.integrity
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        try Wire(body: body, integrity: integrity).encode(to: encoder)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        body = try container.decode(Body.self, forKey: .body)
+        integrity = try container.decode(String.self, forKey: .integrity)
+        guard body.version == Self.currentVersion,
+              TableActor(body.actorID)?.id == body.actorID,
+              appliedAt.timeIntervalSinceReferenceDate.isFinite,
+              body.parent.isValid,
+              body.result.isValid,
+              parentRevision.tableID == resultRevision.tableID,
+              parentRevision.isOlder(than: resultRevision),
+              Self.constantTimeEqual(integrity, try Self.digest(body)) else {
+            throw CodingFailure.invalidPayload
+        }
     }
 
     public func encoded() throws -> Data {
         let data = try GamePayload.encoder.encode(self)
         guard data.count <= Self.maximumEncodedLength else { throw CodingFailure.payloadTooLarge }
         return data
+    }
+
+    public func encodedString() throws -> String {
+        try encoded().base64URLEncodedString()
+    }
+
+    public static func decode(from string: String) throws -> Self {
+        guard string.utf8.count <= ((maximumEncodedLength + 2) / 3) * 4,
+              let data = Data(base64URLEncoded: string) else {
+            throw CodingFailure.invalidPayload
+        }
+        return try decode(from: data)
     }
 
     /// Size-gated canonical decoding rejects extra fields, unsupported versions,
@@ -135,18 +145,6 @@ public struct TableMutationReceipt: Codable, Sendable, Equatable {
         case emptyPayload
         case payloadTooLarge
         case invalidPayload
-    }
-
-    private static func isValid(_ wire: Wire) -> Bool {
-        guard wire.body.version == currentVersion,
-              TableActor(wire.body.actorID)?.id == wire.body.actorID,
-              Double(bitPattern: wire.body.timeBits).isFinite,
-              wire.body.parent.isValid,
-              wire.body.result.isValid,
-              wire.body.parent.revision.tableID == wire.body.result.revision.tableID,
-              wire.body.parent.revision.isOlder(than: wire.body.result.revision),
-              let expected = try? digest(wire.body) else { return false }
-        return constantTimeEqual(wire.integrity, expected)
     }
 
     private static func digest(_ body: Body) throws -> String {
@@ -168,29 +166,13 @@ public enum TableMutationRecordingResult: Sendable, Equatable {
     case unrecordable
 }
 
-public enum TableMutationVerificationRejection: Sendable, Equatable {
-    case tampered
-    case wrongActor
-    case wrongTable
-    case wrongParent
-    case operationUnchanged
-    case operationRejected(TableOperationRejection)
-    case wrongResult
-}
-
-public enum TableMutationVerificationResult: Sendable, Equatable {
-    case verified(TableMessage)
-    case rejected(TableMutationVerificationRejection)
-}
-
 public extension TableMutationReceipt {
     /// Checks that the receipt names this exact successor. This validates the
     /// sealed revision and state fingerprint but does not authenticate the
     /// actor or prove that the operation was legal; callers still need a local
-    /// participant identity and, when available, `verifying(predecessor:...)`.
+    /// participant identity and, when available, `replay(predecessor:...)`.
     func matchesResult(_ message: TableMessage) -> Bool {
-        Self.isValid(Wire(body: body, integrity: integrity))
-            && result.matches(message)
+        body.result.matches(message)
     }
 
     static func recording(
@@ -222,33 +204,18 @@ public extension TableMutationReceipt {
 
     /// `authenticatedActor` must be derived locally (for example, from
     /// `MSMessage.senderParticipantIdentifier`), never trusted from the receipt.
-    func verifying(
+    func replay(
         predecessor: TableMessage,
         authenticatedActor: TableActor
-    ) -> TableMutationVerificationResult {
-        guard Self.isValid(Wire(body: body, integrity: integrity)) else {
-            return .rejected(.tampered)
-        }
-        guard actorID == authenticatedActor.id else { return .rejected(.wrongActor) }
-        guard predecessor.revision.tableID == parentRevision.tableID else {
-            return .rejected(.wrongTable)
-        }
-        guard parent.matches(predecessor) else { return .rejected(.wrongParent) }
-
-        switch predecessor.committing(
+    ) -> TableMessage? {
+        guard actorID == authenticatedActor.id,
+              body.parent.matches(predecessor),
+              case .applied(let replayed) = predecessor.committing(
             operation,
             actor: authenticatedActor,
             latestRevision: parentRevision,
             now: appliedAt
-        ) {
-        case .unchanged:
-            return .rejected(.operationUnchanged)
-        case .rejected(let rejection):
-            return .rejected(.operationRejected(rejection))
-        case .applied(let replayed):
-            return result.matches(replayed)
-                ? .verified(replayed)
-                : .rejected(.wrongResult)
-        }
+        ), body.result.matches(replayed) else { return nil }
+        return replayed
     }
 }

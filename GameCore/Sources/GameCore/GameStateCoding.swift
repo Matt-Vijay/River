@@ -12,8 +12,6 @@ extension GameState {
     public init(from decoder: Decoder) throws {
         let shape = try decoder.container(keyedBy: GameStateAnyCodingKey.self)
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let requiresCanonicalNumbers =
-            (decoder.userInfo[GamePayload.wireVersionKey] as? Int ?? 2) >= 2
         let allowedKeys: Set<String> = [
             "tableID", "handNumber", "players", "dealerIndex", "smallBlind", "bigBlind",
             "board", "deck", "pot", "street", "currentToAct", "minRaise",
@@ -85,7 +83,7 @@ extension GameState {
         let stateVersion = try container.decodeIfPresent(Int.self, forKey: .version)
         let wireTurnDuration = try container.decode(TimeInterval.self, forKey: .turnDuration)
         let wireTurnStartedAt = try container.decodeIfPresent(Date.self, forKey: .turnStartedAt)
-        if requiresCanonicalNumbers {
+        if wireVersion >= 2 {
             guard wireHandNumber >= 1,
                   stateVersion.map({ $0 >= 0 }) == true,
                   blinds.smallBlind == wireSmallBlind,
@@ -161,16 +159,7 @@ private extension GameState {
         // retaining the historical chip stacks and contributions.
         let ranks = contenders.count > 1 ? showdownRanks() : [:]
         let winnings = settlement(ranks: ranks).winnings
-        results = players.indices.compactMap { index in
-            let playerID = players[index].id
-            guard let amount = winnings[playerID], amount > 0 else { return nil }
-            return HandResult(
-                playerID: playerID,
-                amountWon: amount,
-                handName: ranks[index]?.name,
-                bestFive: ranks[index]?.bestFive
-            )
-        }
+        results = showdownResults(ranks: ranks, winnings: winnings)
     }
 
     func validateDecodedIntegrity(

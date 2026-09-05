@@ -4,10 +4,6 @@ import GameCore
 import HoldemUI
 
 extension MessagesViewController {
-    func heroID(_ conversation: MSConversation) -> String {
-        conversation.localParticipantIdentifier.uuidString
-    }
-
     func render(conversation: MSConversation) {
         guard let configuredProfile = profile.configuredProfile else {
             renderProfileSetup()
@@ -83,7 +79,7 @@ extension MessagesViewController {
     private func render(_ selectedMessage: SelectedTableMessage,
                         profile configuredProfile: PlayerProfile,
                         conversation: MSConversation) {
-        let hero = heroID(conversation)
+        let hero = conversation.localParticipantIdentifier.uuidString
         let intendedLobbyID = lobbySeatIntent
         lobbySeatIntent = nil
         switch selectedMessage {

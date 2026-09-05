@@ -9,7 +9,6 @@ public enum TableOperation: Codable, Sendable, Equatable {
     case joinGame(name: String, avatar: String, startingStack: Int)
     case leaveGame
     case dealNextHand(seed: UInt64)
-
 }
 
 public enum TableOperationRejection: Sendable, Equatable {
@@ -120,7 +119,7 @@ public struct TableRevision: Codable, Sendable, Equatable {
     public let phase: Phase
     public let version: Int
     /// Stable state digest used only to order concurrent equal-version messages.
-    private let branch: String
+    let branch: String
 
     init(tableID: String, phase: Phase, version: Int, branch: String = "") {
         self.tableID = Identity.normalized(tableID)
@@ -323,11 +322,11 @@ extension TableMessage {
         case .lobby(let lobby):
             return TableRevision(
                 tableID: lobby.tableID, phase: .lobby, version: lobby.version,
-                branch: GamePayload.conflictKey(for: self))
+                branch: GamePayload.stateFingerprint(for: self))
         case .game(let state):
             return TableRevision(
                 tableID: state.tableID, phase: .game, version: state.version,
-                branch: GamePayload.conflictKey(for: self))
+                branch: GamePayload.stateFingerprint(for: self))
         }
     }
 
@@ -343,6 +342,7 @@ extension TableMessage {
         _ kind: TableOperation, actor: TableActor,
         latestRevision: TableRevision? = nil, now: Date = Date()
     ) -> TableOperationResult {
+        let revision = revision
         switch revision.disposition(comparedTo: latestRevision) {
         case .differentTable, .stale, .conflicting(preferred: false):
             return .rejected(.stale)
@@ -355,8 +355,9 @@ extension TableMessage {
         case .game(let state): state.applying(kind, actorID: actor.id, now: now)
         }
         guard case .applied(let next) = result else { return result }
-        guard next.revision.tableID == revision.tableID,
-              revision.isOlder(than: next.revision) else {
+        let nextRevision = next.revision
+        guard nextRevision.tableID == revision.tableID,
+              revision.isOlder(than: nextRevision) else {
             return .rejected(.illegalAction)
         }
         return result

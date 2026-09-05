@@ -47,8 +47,8 @@ struct NumericBoundaryTests {
         for row in rows {
             for version in [0, 1, 2] {
                 let accepted = version < 2 ? row.legacyAccepted : row.v2Accepted
-                let outcome = try outcome(row, version: version)
-                #expect(matches(outcome, accepted: accepted),
+                let decoded = try decodedBoundary(row, version: version)
+                #expect((decoded != nil) == accepted,
                         Comment(rawValue: "v\(version) \(row.label)"))
                 count += 1
             }
@@ -194,7 +194,7 @@ private func allResults(_ value: Int) -> Mutation { { game in
     game["results"] = results
 } }
 
-private func outcome(_ row: BoundaryRow, version: Int) throws -> GamePayload.DecodeOutcome {
+private func decodedBoundary(_ row: BoundaryRow, version: Int) throws -> TableMessage? {
     var root = try #require(JSONSerialization.jsonObject(
         with: GamePayload.encoder.encode(row.message)) as? [String: Any])
     let key = if case .game = row.message { "game" } else { "lobby" }
@@ -209,10 +209,5 @@ private func outcome(_ row: BoundaryRow, version: Int) throws -> GamePayload.Dec
         root["integrity"] = SHA256.hash(data: framed).map { String(format: "%02x", $0) }.joined()
     }
     let data = try JSONSerialization.data(withJSONObject: root, options: [.sortedKeys])
-    return GamePayload.decodeOutcome(from: data.base64URLEncodedString())
-}
-
-private func matches(_ outcome: GamePayload.DecodeOutcome, accepted: Bool) -> Bool {
-    if case .decoded = outcome { return accepted }
-    return !accepted && outcome == .rejected(.invalidState)
+    return try? GamePayload.decodeMessage(from: data.base64URLEncodedString())
 }

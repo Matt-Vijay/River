@@ -69,7 +69,7 @@ struct TableRevisionTests {
         #expect(left.revision.disposition(comparedTo: base.revision) == .newer)
         #expect(base.revision.disposition(comparedTo: left.revision) == .stale)
         #expect(
-            base.revision.disposition(comparedTo: Lobby(tableID: "other").message.revision)
+            base.revision.disposition(comparedTo: TableMessage.lobby(Lobby(tableID: "other")).revision)
                 == .differentTable
         )
         #expect(left.revision.conflicts(with: right.revision))
@@ -125,10 +125,96 @@ struct TableRevisionTests {
             .gameAction(.fold), actorID: "a", latestRevision: otherTable
         ) == .rejected(.stale))
     }
-}
 
-private extension Lobby {
-    var message: TableMessage { .lobby(self) }
+    @Test("out-of-order messages converge without reviving stale or foreign tables")
+    func outOfOrderSequence() {
+        let events: [(TableRevision.Phase, Int, String, TableRevisionDisposition)] = [
+            (.lobby, 0, "2", .firstSeen),
+            (.lobby, 2, "2", .newer),
+            (.lobby, 1, "3", .stale),
+            (.lobby, 2, "2", .duplicate),
+            (.lobby, 2, "1", .conflicting(preferred: false)),
+            (.lobby, 2, "f", .conflicting(preferred: true)),
+            (.lobby, 2, "2", .conflicting(preferred: false)),
+            (.lobby, 2, "", .stale),
+            (.game, 0, "3", .newer),
+            (.lobby, Int.max, "f", .stale),
+            (.game, 0, "3", .duplicate),
+            (.game, Int.max, "f", .differentTable),
+            (.game, 1, "1", .newer),
+        ]
+        var latest: TableRevision?
+        for (phase, version, branch, expected) in events {
+            let received = TableRevision(
+                tableID: expected == .differentTable ? "foreign" : "sequence",
+                phase: phase, version: version, branch: String(repeating: branch, count: 32)
+            )
+            #expect(received.disposition(comparedTo: latest) == expected)
+            if let latest {
+                #expect(received.isOlder(than: latest)
+                        == (expected == .stale || expected == .conflicting(preferred: false)))
+                #expect(received.conflicts(with: latest)
+                        == (expected == .conflicting(preferred: false)
+                            || expected == .conflicting(preferred: true)))
+            }
+            switch expected {
+            case .firstSeen, .newer, .conflicting(preferred: true): latest = received
+            default: break
+            }
+        }
+        #expect(latest?.phase == .game)
+        #expect(latest?.version == 1)
+    }
+
+    @Test("revision preflight also protects idempotent joins")
+    func idempotentJoinPreflight() {
+        let source = TableMessage.lobby(Lobby(
+            tableID: "commit-table", version: 7,
+            seats: [LobbySeat(id: "host", name: "Host", avatar: "H")]
+        ))
+        let low = String(repeating: "0", count: 32)
+        let high = String(repeating: "f", count: 32)
+        #expect(source.revision.branch > low && source.revision.branch < high)
+        let cases: [(TableRevision?, Bool)] = [
+            (nil, true),
+            (source.revision, true),
+            (TableRevision(tableID: "commit-table", phase: .lobby, version: 6, branch: high), true),
+            (TableRevision(tableID: "commit-table", phase: .lobby, version: 8, branch: low), false),
+            (TableRevision(tableID: "commit-table", phase: .lobby, version: 7), true),
+            (TableRevision(tableID: "commit-table", phase: .lobby, version: 7, branch: low), true),
+            (TableRevision(tableID: "commit-table", phase: .lobby, version: 7, branch: high), false),
+            (TableRevision(tableID: "commit-table", phase: .game, version: 0), false),
+            (TableRevision(tableID: "foreign", phase: .lobby, version: 7), false),
+        ]
+        for (latest, admitted) in cases {
+            #expect(source.committing(
+                .joinLobby(name: "Ignored", avatar: "X"), actorID: "host", latestRevision: latest
+            ) == (admitted ? .unchanged : .rejected(.stale)))
+        }
+    }
+
+    @Test("the final representable lobby and game revisions can still commit")
+    func finalSuccessor() throws {
+        let lobby = Lobby(tableID: "boundary-table", version: Int.max - 1)
+        guard case .game(var game) = headsUpTableMessage() else {
+            Issue.record("expected game fixture")
+            return
+        }
+        game.version = Int.max - 1
+        let cases: [(TableMessage, TableOperation)] = [
+            (.lobby(lobby), .joinLobby(name: "Alice", avatar: "A")),
+            (.game(game), .gameAction(.fold)),
+        ]
+        for (source, operation) in cases {
+            guard case .applied(let next) = source.committing(operation, actorID: "a") else {
+                Issue.record("expected final successor for \(operation)")
+                continue
+            }
+            #expect(next.revision.version == Int.max)
+            #expect(next.revision.tableID == source.revision.tableID)
+            #expect(source.revision.isOlder(than: next.revision))
+        }
+    }
 }
 
 @Suite("Table summaries")

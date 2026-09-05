@@ -181,9 +181,8 @@ extension GameState {
         let eligibleOriginalIndices = players.indices.filter { players[$0].isEligibleForNextHand }
         guard eligibleOriginalIndices.count >= 2 else { return nil }
 
-        let eligible = Set(eligibleOriginalIndices)
-        let nextDealerOriginalIndex = nextDealerOriginalIndex(in: eligible)
-        guard let dealer = eligibleOriginalIndices.firstIndex(of: nextDealerOriginalIndex) else {
+        guard let nextDealer = nextDealerOriginalIndex(in: eligibleOriginalIndices),
+              let dealer = eligibleOriginalIndices.firstIndex(of: nextDealer) else {
             return nil
         }
 
@@ -202,7 +201,7 @@ extension GameState {
         return next
     }
 
-    private func nextDealerOriginalIndex(in eligible: Set<Int>) -> Int {
+    private func nextDealerOriginalIndex(in eligible: [Int]) -> Int? {
         // On the transition to heads-up, the button may need to move out of
         // the ordinary sequence so the prior big blind is not big blind twice.
         // Making that player the button preserves alternating blinds.
@@ -211,36 +210,16 @@ extension GameState {
            eligible.contains(priorBigBlind) {
             return priorBigBlind
         }
-        return nextOriginalSeatAfterDealer(in: eligible)
+        return nextSeat(after: dealerIndex) { $0.isEligibleForNextHand }
     }
 
     private func priorBigBlindOriginalIndex() -> Int? {
-        let dealtIn = Set(players.indices.filter { players[$0].holeCards.count == 2 })
-        guard dealtIn.count >= 2 else { return nil }
-
-        if dealtIn.count == 2 {
-            return nextOriginalSeat(after: dealerIndex, in: dealtIn)
-        }
-        guard let smallBlind = nextOriginalSeat(after: dealerIndex, in: dealtIn) else {
+        let dealtInCount = players.filter { $0.holeCards.count == 2 }.count
+        guard dealtInCount >= 2,
+              let first = nextSeat(after: dealerIndex, where: { $0.holeCards.count == 2 }) else {
             return nil
         }
-        return nextOriginalSeat(after: smallBlind, in: dealtIn)
-    }
-
-    private func nextOriginalSeat(after index: Int, in seats: Set<Int>) -> Int? {
-        guard !players.isEmpty else { return nil }
-        let index = Self.normalizedSeat(index, playerCount: players.count)
-        for offset in 1...players.count {
-            let candidate = (index + offset) % players.count
-            if seats.contains(candidate) { return candidate }
-        }
-        return nil
-    }
-
-    private func nextOriginalSeatAfterDealer(in eligible: Set<Int>) -> Int {
-        nextOriginalSeat(after: dealerIndex, in: eligible)
-            ?? eligible.min()
-            ?? dealerIndex
+        return dealtInCount == 2 ? first : nextSeat(after: first) { $0.holeCards.count == 2 }
     }
 }
 
@@ -356,7 +335,7 @@ extension GameState {
         return ranks
     }
 
-    private func showdownResults(ranks: [Int: HandRank], winnings: [String: Int]) -> [HandResult] {
+    func showdownResults(ranks: [Int: HandRank], winnings: [String: Int]) -> [HandResult] {
         players.indices.compactMap { index in
             guard let amount = winnings[players[index].id],
                   amount > 0 else { return nil }

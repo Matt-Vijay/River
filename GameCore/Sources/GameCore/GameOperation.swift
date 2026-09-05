@@ -72,82 +72,45 @@ extension GameState {
     }
 
     func applying(_ kind: TableOperation, actorID: String, now: Date) -> TableOperationResult {
+        var next = self
         switch kind {
-        case .gameAction(let action): return applyingGameAction(action, actorID: actorID, now: now)
-
-        case .resolveTimeout: return applyingTimeoutResolution(actorID: actorID, now: now)
-
+        case .gameAction(let action):
+            guard !isGameOver else { return .rejected(.gameOver) }
+            guard let index = playerIndex(id: actorID) else { return .rejected(.notSeated) }
+            guard !isTurnExpired(at: now) else { return .rejected(.illegalAction) }
+            guard isCurrentPlayer(at: index) else { return .rejected(.notActorTurn) }
+            guard next.applyCurrent(action, by: index, now: now) else {
+                return .rejected(.illegalAction)
+            }
+        case .resolveTimeout:
+            guard !isGameOver else { return .rejected(.gameOver) }
+            guard let actor = player(id: actorID), !actor.hasLeft else { return .rejected(.notSeated) }
+            guard next.resolveTimeout(now: now) else { return .rejected(.illegalAction) }
         case .joinGame(let name, let avatar, let startingStack):
-            return joiningGame(
-                actorID: actorID, name: name, avatar: avatar, startingStack: startingStack)
-
-        case .leaveGame: return leavingGame(actorID: actorID, now: now)
-
-        case .dealNextHand(let seed): return dealingNextHand(seed: seed, actorID: actorID, now: now)
-
-        default: return .rejected(.wrongPhase)
+            guard !isGameOver else { return .rejected(.gameOver) }
+            guard canJoinGame(id: actorID) else { return .rejected(.tableFull) }
+            guard next.rejoinOrAddSittingOutPlayer(
+                id: actorID, name: name, avatar: avatar, stack: startingStack)
+            else { return .unchanged }
+            guard let version = MonotonicCounter.successor(of: version) else {
+                return .rejected(.illegalAction)
+            }
+            next.version = version
+        case .leaveGame:
+            guard !isGameOver else { return .rejected(.gameOver) }
+            guard let player = player(id: actorID), !player.hasLeft else { return .rejected(.notSeated) }
+            guard next.playerLeaves(id: actorID, now: now) else { return .rejected(.illegalAction) }
+        case .dealNextHand(let seed):
+            guard playersEligibleForNextHand.count >= 2 else { return .rejected(.gameOver) }
+            guard let actor = player(id: actorID), actor.isEligibleForNextHand else {
+                return .rejected(.notSeated)
+            }
+            guard isHandComplete else { return .rejected(.illegalAction) }
+            guard let dealt = startNextHand(seed: seed, now: now) else { return .rejected(.gameOver) }
+            next = dealt
+        default:
+            return .rejected(.wrongPhase)
         }
-    }
-
-    private func applyingGameAction(_ action: PlayerAction, actorID: String, now: Date)
-        -> TableOperationResult
-    {
-        guard !isGameOver else { return .rejected(.gameOver) }
-        guard let actorIndex = playerIndex(id: actorID) else { return .rejected(.notSeated) }
-        guard !isTurnExpired(at: now) else { return .rejected(.illegalAction) }
-        guard isCurrentPlayer(at: actorIndex) else { return .rejected(.notActorTurn) }
-
-        var next = self
-        guard next.applyCurrent(action, by: actorIndex, now: now) else {
-            return .rejected(.illegalAction)
-        }
-        return .applied(.game(next))
-    }
-
-    private func applyingTimeoutResolution(actorID: String, now: Date) -> TableOperationResult {
-        guard !isGameOver else { return .rejected(.gameOver) }
-        guard let actor = player(id: actorID), !actor.hasLeft else { return .rejected(.notSeated) }
-        var next = self
-        guard next.resolveTimeout(now: now) else { return .rejected(.illegalAction) }
-        return .applied(.game(next))
-    }
-
-    private func joiningGame(actorID: String, name: String, avatar: String, startingStack: Int)
-        -> TableOperationResult
-    {
-        guard !isGameOver else { return .rejected(.gameOver) }
-        guard canJoinGame(id: actorID) else { return .rejected(.tableFull) }
-
-        var next = self
-        guard next.rejoinOrAddSittingOutPlayer(
-            id: actorID, name: name, avatar: avatar, stack: startingStack)
-        else { return .unchanged }
-        guard let nextVersion = MonotonicCounter.successor(of: version) else {
-            return .rejected(.illegalAction)
-        }
-
-        next.version = nextVersion
-        return .applied(.game(next))
-    }
-
-    private func leavingGame(actorID: String, now: Date) -> TableOperationResult {
-        guard !isGameOver else { return .rejected(.gameOver) }
-        guard let player = player(id: actorID), !player.hasLeft else {
-            return .rejected(.notSeated)
-        }
-
-        var next = self
-        guard next.playerLeaves(id: actorID, now: now) else { return .rejected(.illegalAction) }
-        return .applied(.game(next))
-    }
-
-    private func dealingNextHand(seed: UInt64, actorID: String, now: Date) -> TableOperationResult {
-        guard playersEligibleForNextHand.count >= 2 else { return .rejected(.gameOver) }
-        guard let actor = player(id: actorID), actor.isEligibleForNextHand else {
-            return .rejected(.notSeated)
-        }
-        guard isHandComplete else { return .rejected(.illegalAction) }
-        guard let next = startNextHand(seed: seed, now: now) else { return .rejected(.gameOver) }
         return .applied(.game(next))
     }
 
