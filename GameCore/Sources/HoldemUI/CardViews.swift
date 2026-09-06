@@ -93,7 +93,7 @@ struct BoardView: View {
                     .layoutPriority(1)
                     .accessibilityLabel("Pot")
                     .accessibilityValue(ChipText.string(pot))
-                    .accessibilityIdentifier(HoldemAccessibility.Table.pot)
+                    .accessibilityIdentifier("table.pot")
             }
         }
         .accessibilityElement(children: .contain)
@@ -102,7 +102,7 @@ struct BoardView: View {
                 ? "Board empty"
                 : "Board: \(board.map(\.spokenDescription).joined(separator: ", "))"
         )
-        .accessibilityIdentifier(HoldemAccessibility.Table.board)
+        .accessibilityIdentifier("table.board")
     }
 }
 

@@ -105,6 +105,13 @@ struct TableMutationReceiptTests {
         #expect(decodedStart.resultRevision.phase == .game)
         #expect(decodedStart.replay(predecessor: lobby, authenticatedActor: host) == game)
 
+        // JSON dates can lose a fractional bit; receipts compare the canonical
+        // wire state, not raw in-memory Date equality.
+        let receivedGame = try GamePayload.decodeMessage(from: GamePayload.encode(game))
+        #expect(decodedStart.matchesResult(receivedGame))
+        #expect(decodedStart.replay(predecessor: lobby, authenticatedActor: host)?.revision
+                == receivedGame.revision)
+
         guard case .game(let state) = game,
               let actorIndex = state.currentToAct,
               let actor = TableActor(state.players[actorIndex].id) else {
@@ -120,6 +127,8 @@ struct TableMutationReceiptTests {
         }
         let decodedAction = try TableMutationReceipt.decode(from: actionReceipt.encoded())
         #expect(decodedAction.replay(predecessor: game, authenticatedActor: actor) == acted)
+        #expect(decodedAction.replay(predecessor: receivedGame, authenticatedActor: actor)?.revision
+                == acted.revision)
     }
 
     @Test("replay rejects wrong actor, table, parent, operation outcome, and result")

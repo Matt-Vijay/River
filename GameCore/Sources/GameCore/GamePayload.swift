@@ -2,6 +2,27 @@ import Compression
 import CryptoKit
 import Foundation
 
+extension Decoder {
+    func container<Key: CodingKey & CaseIterable>(
+        validatingKeys type: Key.Type
+    ) throws -> KeyedDecodingContainer<Key> {
+        let keys = try container(keyedBy: JSONField.self).allKeys.map(\.stringValue)
+        guard Set(keys).isSubset(of: Set(Key.allCases.map(\.stringValue))) else {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: codingPath, debugDescription: "Unknown payload fields"))
+        }
+        return try container(keyedBy: type)
+    }
+}
+
+private struct JSONField: CodingKey {
+    let stringValue: String
+    let intValue: Int? = nil
+
+    init?(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { return nil }
+}
+
 /// Packs game data into compact, URL-safe forms for iMessage payloads.
 public enum GamePayload {
     /// Leaves room for URL syntax under Messages' 5,000-character limit.

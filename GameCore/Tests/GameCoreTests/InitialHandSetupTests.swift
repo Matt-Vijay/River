@@ -197,7 +197,7 @@ struct InitialHandSetupTests {
 @Suite("Player")
 struct PlayerTests {
     @Test("construction normalizes identity, profile, and chips")
-    func constructionNormalizesInput() {
+    func constructionNormalizesInput() throws {
         let avatar = String(repeating: "A", count: ProfileText.maxAvatarLength + 4)
         let player = Player(id: "  a  ", name: "  Alice  ",
                             avatar: "  \(avatar)  ", stack: -100)
@@ -210,6 +210,16 @@ struct PlayerTests {
         #expect(!fallback.id.isEmpty)
         #expect(fallback.name == "Player")
         #expect(fallback.avatar == "🙂")
+
+        for id in [String(repeating: "a", count: 128), String(repeating: "é", count: 64)] {
+            let player = Player(id: id, name: "Player", avatar: "A", stack: 100)
+            let state = GameState.startHand(
+                players: [player, player], dealerIndex: 0, smallBlind: 5, bigBlind: 10,
+                seed: 1, handNumber: 1, now: Date(timeIntervalSince1970: 2_000))
+            #expect(Set(state.players.map(\.id)).count == 2)
+            #expect(state.players.allSatisfy { $0.id.utf8.count <= Identity.maximumUTF8Length })
+            #expect(try GamePayload.decodeMessage(from: GamePayload.encode(.game(state))) == .game(state))
+        }
     }
 
     @Test("decoding rejects more than two hole cards")

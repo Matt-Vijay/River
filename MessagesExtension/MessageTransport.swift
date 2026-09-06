@@ -19,7 +19,43 @@ enum SelectedTableMessage {
     }
 }
 
-enum MessagePayloads {
+/// A decoded snapshot of one message. Receive/select callbacks establish trust;
+/// rendering and send completion use the same immutable table and revision.
+@MainActor
+struct MessageSource {
+    let message: MSMessage
+    let content: SelectedTableMessage
+    let revision: TableRevision?
+
+    init(receiving message: MSMessage, localID: String, history: TableHistory,
+         predecessor: TableMessage? = nil) {
+        self.message = message
+        content = Self.decode(message, localID: localID, history: history, predecessor: predecessor)
+        revision = content.decodedMessage?.revision
+    }
+
+    init(sending table: TableMessage, receipt: TableMutationReceipt,
+         replacing source: MSMessage?) throws {
+        message = try Self.makeMessage(for: table, receipt: receipt, replacing: source)
+        content = .message(table)
+        revision = receipt.resultRevision
+    }
+
+    func supersedes(_ baseline: MessageSource) -> Bool {
+        guard case .message = content, case .message = baseline.content,
+              let revision, let previous = baseline.revision else { return false }
+        return revision.tableID != previous.tableID || previous.isOlder(than: revision)
+    }
+
+    func shouldDisplay(replacing current: MessageSource?) -> Bool {
+        guard case .message = content, let revision else { return false }
+        guard let current else { return true }
+        if let previous = current.revision {
+            return revision.isSameOrNewer(than: previous)
+        }
+        return message.session != nil && message.session == current.message.session
+    }
+
     private static let payloadKey = "g"
     private static let receiptKey = "r"
     private static let transportScheme = "data"
@@ -28,15 +64,9 @@ enum MessagePayloads {
     /// the stricter bound because every URL this transport emits is ASCII.
     private static let maximumURLLength = 5_000
 
-    /// A nil `senderParticipantIdentifier` never authenticates a received
-    /// message. The explicit optimistic identity is only for an `MSMessage`
-    /// object the controller itself just constructed locally.
-    static func tableMessage(
-        from message: MSMessage?,
-        authenticatingOptimisticLocalParticipant optimisticLocalParticipant: UUID? = nil,
-        predecessor: TableMessage? = nil
-    ) -> SelectedTableMessage {
-        guard let url = message?.url,
+    private static func decode(_ message: MSMessage, localID: String, history: TableHistory,
+                               predecessor: TableMessage?) -> SelectedTableMessage {
+        guard let url = message.url,
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return .none
         }
@@ -78,21 +108,7 @@ enum MessagePayloads {
                 : .invalidPayload
         }
 
-        let authenticatedParticipant: UUID
-        if let sender = message?.senderParticipantIdentifier {
-            if let optimisticLocalParticipant, sender != optimisticLocalParticipant {
-                return .invalidPayload
-            }
-            authenticatedParticipant = sender
-        } else if let optimisticLocalParticipant {
-            authenticatedParticipant = optimisticLocalParticipant
-        } else {
-            return .invalidPayload
-        }
-        guard receipt.actorID == authenticatedParticipant.uuidString,
-              let actor = TableActor(receipt.actorID) else {
-            return .invalidPayload
-        }
+        guard let actor = TableActor(receipt.actorID) else { return .invalidPayload }
 
         // A locally held state is only a replay predecessor when its full
         // revision (including the state fingerprint branch) matches the claim.
@@ -102,15 +118,21 @@ enum MessagePayloads {
             guard receipt.replay(
                 predecessor: predecessor,
                 authenticatedActor: actor
-            ) == table else {
+            ) != nil else {
                 return .invalidPayload
             }
         }
 
+        // Learn the device-local sender alias only after the payload and any
+        // available replay have passed. Never compare UUIDs across devices.
+        guard history.bind(actor, senderID: message.senderParticipantIdentifier.uuidString,
+                           localID: localID, result: receipt.resultRevision) else {
+            return .invalidPayload
+        }
         return .message(table)
     }
 
-    static func makeMessage(for message: TableMessage,
+    private static func makeMessage(for message: TableMessage,
                             receipt: TableMutationReceipt,
                             replacing sourceMessage: MSMessage?) throws -> MSMessage {
         guard receipt.matchesResult(message) else {
@@ -161,49 +183,82 @@ enum MessagePayloads {
     }
 }
 
-final class LatestRevisionStore {
+final class TableHistory {
+    private struct Record: Codable, Equatable {
+        let tableID: String
+        var revision: TableRevision?
+        var participants = TableParticipants()
+    }
+
     private static let limit = 64
     private let defaults: UserDefaults
-    private let key = "HoldemLatestTableRevisions.v1"
-    private lazy var revisions = loadRevisions()
+    private let key = "RiverTableHistory.v1"
+    private let legacyKey = "HoldemLatestTableRevisions.v1"
+    private lazy var records = loadRecords()
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
     }
 
     func latest(for tableID: String) -> TableRevision? {
-        revisions.first { $0.tableID == tableID }
+        records.first { $0.tableID == tableID }?.revision
+    }
+
+    func bind(_ actor: TableActor, senderID: String, localID: String, result: TableRevision) -> Bool {
+        var record = records.first { $0.tableID == result.tableID } ?? Record(tableID: result.tableID)
+        // Messages can re-alias our own sent bubble. Recognize only an exact
+        // already-known result, never a new state claiming the local seat.
+        if actor.id == localID, record.revision == result { return true }
+        guard record.participants.bind(actor, senderID: senderID, localID: localID) else {
+            return false
+        }
+        save(record)
+        return true
     }
 
     @discardableResult
     func observe(_ revision: TableRevision) -> Bool {
-        if let index = revisions.firstIndex(where: { $0.tableID == revision.tableID }) {
-            let latest = revisions[index]
+        var record = records.first { $0.tableID == revision.tableID }
+            ?? Record(tableID: revision.tableID)
+        if let latest = record.revision {
             guard revision.isSameOrNewer(than: latest) else { return false }
-            guard revision != latest else { return true }
-            revisions.remove(at: index)
         }
-        revisions.append(revision)
-        revisions = Array(revisions.suffix(Self.limit))
-        if let data = try? JSONEncoder().encode(revisions) {
-            defaults.set(data, forKey: key)
-        }
+        record.revision = revision
+        save(record)
         return true
     }
 
-    private func loadRevisions() -> [TableRevision] {
-        guard let data = defaults.data(forKey: key),
-              let revisions = try? JSONDecoder().decode([TableRevision].self, from: data) else {
-            defaults.removeObject(forKey: key)
-            return []
+    private func save(_ record: Record) {
+        if let index = records.firstIndex(where: { $0.tableID == record.tableID }) {
+            guard records[index] != record else { return }
+            records.remove(at: index)
         }
-        var normalized: [TableRevision] = []
-        for revision in revisions {
+        records.append(record)
+        // Messages we have not opened must not evict remembered table revisions.
+        records = Array(records.filter { $0.revision != nil }.suffix(Self.limit))
+            + Array(records.filter { $0.revision == nil }.suffix(Self.limit))
+        if let data = try? JSONEncoder().encode(records) {
+            defaults.set(data, forKey: key)
+            defaults.removeObject(forKey: legacyKey)
+        }
+    }
+
+    private func loadRecords() -> [Record] {
+        if let data = defaults.data(forKey: key),
+           let records = try? JSONDecoder().decode([Record].self, from: data) {
+            return Array(records.filter { $0.revision != nil }.suffix(Self.limit))
+                + Array(records.filter { $0.revision == nil }.suffix(Self.limit))
+        }
+        let legacy = defaults.data(forKey: legacyKey)
+            .flatMap { try? JSONDecoder().decode([TableRevision].self, from: $0) } ?? []
+        var normalized: [Record] = []
+        for revision in legacy {
             if let index = normalized.firstIndex(where: { $0.tableID == revision.tableID }) {
-                guard revision.isSameOrNewer(than: normalized[index]) else { continue }
+                if let latest = normalized[index].revision,
+                   !revision.isSameOrNewer(than: latest) { continue }
                 normalized.remove(at: index)
             }
-            normalized.append(revision)
+            normalized.append(Record(tableID: revision.tableID, revision: revision))
         }
         return Array(normalized.suffix(Self.limit))
     }

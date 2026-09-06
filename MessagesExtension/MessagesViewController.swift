@@ -15,7 +15,7 @@ final class MessagesViewController: MSMessagesAppViewController {
         let id = UUID()
         let sentRevision: TableRevision
         let recoveryMessage: TableMessage
-        let outgoingMessage: MSMessage
+        let outgoing: MessageSource
         let conversation: MSConversation
         let dismissAfterSend: Bool
     }
@@ -24,14 +24,8 @@ final class MessagesViewController: MSMessagesAppViewController {
 
     lazy var rootHost = SwiftUIRootHost(parent: self)
     let profile = ProfileStore()
-    let revisionStore = LatestRevisionStore()
-    var sourceMessageOverride: MSMessage?
-    /// Identity-based allowlist for the one locally constructed optimistic
-    /// message whose sender field Messages has not populated yet.
-    var optimisticLocalMessage: MSMessage?
-    /// Retains replay input while the selected/source message is decoded more
-    /// than once across lifecycle and rendering callbacks.
-    var sourceVerificationPredecessor: TableMessage?
+    let history = TableHistory()
+    var sourceOverride: MessageSource?
     var lobbySeatIntent: String?
     var activeConversationID: ObjectIdentifier?
     var activeSend: ActiveSend?
@@ -79,21 +73,17 @@ final class MessagesViewController: MSMessagesAppViewController {
     override func didReceive(_ message: MSMessage, conversation: MSConversation) {
         super.didReceive(message, conversation: conversation)
         observeActiveConversation(conversation)
-        let displayed = displayedSourceMessage(in: conversation)
-        let predecessor = authenticatedTableMessage(
-            from: displayed,
-            in: conversation
-        ).decodedMessage
-        guard shouldDisplayReceived(message, in: conversation) else { return }
+        let displayed = displayedSource(in: conversation)
+        let received = MessageSource(receiving: message,
+                                     localID: conversation.localParticipantIdentifier.uuidString,
+                                     history: history,
+                                     predecessor: displayed?.content.decodedMessage)
+        guard received.shouldDisplay(replacing: displayed) else { return }
         // Receiving can refresh what is displayed, but must never reuse a
         // selection-only seat intent and emit a mutation as a side effect.
         lobbySeatIntent = nil
-        if optimisticLocalMessage !== message {
-            optimisticLocalMessage = nil
-        }
-        sourceVerificationPredecessor = predecessor
-        sourceMessageOverride = message
-        if acknowledgeActiveSend(with: message) { return }
+        sourceOverride = received
+        if acknowledgeActiveSend(with: received) { return }
         // Receipt tracks the newest table; only selecting its bubble claims a seat.
         guard rootHost.allowsAutomaticRendering else { return }
         render(conversation: conversation)
@@ -109,32 +99,23 @@ final class MessagesViewController: MSMessagesAppViewController {
         _ message: MSMessage,
         in conversation: MSConversation
     ) -> SelectedTableMessage {
-        let displayed = displayedSourceMessage(in: conversation)
-        let predecessor: TableMessage?
-        if displayed === message {
-            predecessor = sourceVerificationPredecessor
+        let displayed = displayedSource(in: conversation)
+        let selected: MessageSource
+        if let displayed, displayed.message === message, case .message = displayed.content {
+            selected = displayed
         } else {
-            predecessor = authenticatedTableMessage(
-                from: displayed,
-                in: conversation
-            ).decodedMessage
+            selected = MessageSource(receiving: message,
+                                     localID: conversation.localParticipantIdentifier.uuidString,
+                                     history: history,
+                                     predecessor: displayed?.content.decodedMessage)
         }
-        if optimisticLocalMessage !== message {
-            optimisticLocalMessage = nil
-        }
-        sourceVerificationPredecessor = predecessor
-        sourceMessageOverride = message
-        let selected = authenticatedTableMessage(
-            from: message,
-            in: conversation,
-            predecessor: predecessor
-        )
-        if case .message(.lobby(let lobby)) = selected {
+        sourceOverride = selected
+        if case .message(.lobby(let lobby)) = selected.content {
             lobbySeatIntent = lobby.tableID
         } else {
             lobbySeatIntent = nil
         }
-        return selected
+        return selected.content
     }
 
     private func observeActiveConversation(_ conversation: MSConversation) {
@@ -145,31 +126,29 @@ final class MessagesViewController: MSMessagesAppViewController {
             clearActiveSend()
         }
         activeConversationID = conversationID
-        sourceMessageOverride = nil
-        optimisticLocalMessage = nil
-        sourceVerificationPredecessor = nil
+        sourceOverride = nil
         lobbySeatIntent = nil
         if rootHost.isRecovery { rootHost.resumeAutomaticRendering() }
         rootHost.invalidateIdentity()
     }
 
     private func reconcileSourceOverrides(in conversation: MSConversation) {
-        guard let source = sourceMessageOverride,
-              let selected = conversation.selectedMessage else { return }
-        let sourcePayload = authenticatedTableMessage(from: source, in: conversation)
-        let selectedPayload = authenticatedTableMessage(from: selected, in: conversation)
-        if let sourceMessage = sourcePayload.decodedMessage,
-           let selectedMessage = selectedPayload.decodedMessage {
-            guard sourceMessage.revision.tableID == selectedMessage.revision.tableID,
-                  sourceMessage.revision.isOlder(than: selectedMessage.revision) else { return }
-        } else if case .message = sourcePayload,
-                  source.session != nil,
-                  source.session == selected.session {
+        guard let source = sourceOverride,
+              let message = conversation.selectedMessage,
+              source.message !== message else { return }
+        let selected = MessageSource(receiving: message,
+                                     localID: conversation.localParticipantIdentifier.uuidString,
+                                     history: history,
+                                     predecessor: source.content.decodedMessage)
+        if let previous = source.revision, let next = selected.revision {
+            guard previous.tableID == next.tableID, previous.isOlder(than: next) else { return }
+        } else if case .message = source.content,
+                  source.message.session != nil,
+                  source.message.session == message.session {
             return
         }
-        if source.session == nil, selected.session == nil, source.url == selected.url { return }
-        self.sourceMessageOverride = nil
-        optimisticLocalMessage = nil
-        sourceVerificationPredecessor = nil
+        if source.message.session == nil, message.session == nil,
+           source.message.url == message.url { return }
+        sourceOverride = selected
     }
 }

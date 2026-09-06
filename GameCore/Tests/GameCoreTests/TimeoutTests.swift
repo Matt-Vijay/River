@@ -4,16 +4,26 @@ import Foundation
 
 @Suite("Lazy timeout")
 struct TimeoutTests {
-    @Test("a stale turn facing a bet is folded by the next client")
-    func staleFold() {
-        let start = Date()
-        var s = timeoutState(start: start)
-        // Dealer (to act, facing the BB) goes idle past the clock.
+    @Test("the next client explicitly resolves an expired turn and sends the result")
+    func staleFold() throws {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let message = TableMessage.game(timeoutState(start: start))
         let later = start.addingTimeInterval(45)
-        let resolved = s.resolveTimeout(now: later)
-        #expect(resolved == true)
-        #expect(s.players[0].status == .folded)
-        #expect(s.players[1].stack == 1010)  // BB wins uncontested
+        #expect(message.committing(.gameAction(.call), actorID: "p1", now: later)
+                == .rejected(.illegalAction))
+        guard case .applied(.game(let next)) = message.committing(
+            .resolveTimeout, actorID: "p1", now: later
+        ) else {
+            Issue.record("expected explicit timeout resolution")
+            return
+        }
+        let received = try decodedGame(from: encodedGame(next))
+        #expect(received.isHandComplete)
+        #expect(received.players[0].status == .folded)
+        #expect(received.players[1].stack == 1010)
+        #expect(received.players[1].lastAction == nil)
+        #expect(received.results?.first?.playerID == "p1")
+        #expect(received.version == message.revision.version + 1)
     }
 
     @Test("a fresh turn is not resolved")

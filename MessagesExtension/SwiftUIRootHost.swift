@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 
+@MainActor
 final class SwiftUIRootHost {
     enum Interruption {
         case profile

@@ -4,6 +4,34 @@ import Foundation
 
 @Suite("Table revisions")
 struct TableRevisionTests {
+    @Test("device-local sender aliases bind once and survive persistence")
+    func participantBindings() throws {
+        let alice = try #require(TableActor("alice-seat"))
+        let bob = try #require(TableActor("bob-seat"))
+        var onBob = TableParticipants()
+        let bound = onBob.bind(alice, senderID: "alice-on-bob-device", localID: bob.id)
+        #expect(bound)
+        var restored = try JSONDecoder().decode(
+            TableParticipants.self, from: JSONEncoder().encode(onBob)
+        )
+        let cases: [(TableActor, String, Bool)] = [
+            (alice, "alice-on-bob-device", true),
+            (bob, bob.id, true),
+            (alice, bob.id, false),
+            (bob, "alice-on-bob-device", false),
+            (alice, "another-sender", false),
+            (try #require(TableActor("changed-seat")), "alice-on-bob-device", false),
+        ]
+        for (actor, sender, expected) in cases {
+            let accepted = restored.bind(actor, senderID: sender, localID: bob.id)
+            #expect(accepted == expected)
+        }
+        var onAlice = TableParticipants()
+        let remoteBound = onAlice.bind(bob, senderID: "bob-on-alice-device", localID: alice.id)
+        let localBound = onAlice.bind(alice, senderID: alice.id, localID: alice.id)
+        #expect(remoteBound && localBound)
+    }
+
     @Test("table identity survives lobby start and next hand")
     func tableIdentitySurvivesProgression() throws {
         let lobby = Lobby(tableID: "table-123")
@@ -49,8 +77,8 @@ struct TableRevisionTests {
         ))
     }
 
-    @Test("receipt dispositions distinguish replay, order, table, and conflicts")
-    func revisionDispositions() throws {
+    @Test("concurrent equal-version states have one deterministic successor")
+    func concurrentBranches() {
         let base = TableMessage.lobby(
             Lobby(tableID: "table-123")
                 .fixtureSeat(id: "host", name: "Host", avatar: "H")
@@ -64,19 +92,21 @@ struct TableRevisionTests {
             return
         }
 
-        #expect(base.revision.disposition(comparedTo: nil) == .firstSeen)
-        #expect(base.revision.disposition(comparedTo: base.revision) == .duplicate)
-        #expect(left.revision.disposition(comparedTo: base.revision) == .newer)
-        #expect(base.revision.disposition(comparedTo: left.revision) == .stale)
-        #expect(
-            base.revision.disposition(comparedTo: TableMessage.lobby(Lobby(tableID: "other")).revision)
-                == .differentTable
-        )
-        #expect(left.revision.conflicts(with: right.revision))
-        #expect(
-            left.revision.disposition(comparedTo: right.revision)
-                == .conflicting(preferred: left.revision.isSameOrNewer(than: right.revision))
-        )
+        #expect(left.revision.version == right.revision.version)
+        #expect(left.revision != right.revision)
+        let preferred = left.revision.isOlder(than: right.revision) ? right : left
+        let rejected = preferred == left ? right : left
+        #expect(rejected.revision.isOlder(than: preferred.revision))
+        #expect(!preferred.revision.isOlder(than: rejected.revision))
+        #expect(rejected.committing(
+            .leaveLobby, actorID: "host", latestRevision: preferred.revision
+        ) == .rejected(.stale))
+        guard case .applied = preferred.committing(
+            .leaveLobby, actorID: "host", latestRevision: rejected.revision
+        ) else {
+            Issue.record("preferred branch must remain actionable")
+            return
+        }
     }
 
     @Test("legacy revision fingerprints migrate and corrupt revisions are rejected")
@@ -90,7 +120,8 @@ struct TableRevisionTests {
             TableRevision.self,
             from: JSONSerialization.data(withJSONObject: legacy)
         )
-        #expect(revision.disposition(comparedTo: migrated) == .newer)
+        #expect(migrated.isOlder(than: revision))
+        #expect(!revision.isOlder(than: migrated))
 
         for mutation in [
             { (object: inout [String: Any]) in object["version"] = -1 },
@@ -128,39 +159,30 @@ struct TableRevisionTests {
 
     @Test("out-of-order messages converge without reviving stale or foreign tables")
     func outOfOrderSequence() {
-        let events: [(TableRevision.Phase, Int, String, TableRevisionDisposition)] = [
-            (.lobby, 0, "2", .firstSeen),
-            (.lobby, 2, "2", .newer),
-            (.lobby, 1, "3", .stale),
-            (.lobby, 2, "2", .duplicate),
-            (.lobby, 2, "1", .conflicting(preferred: false)),
-            (.lobby, 2, "f", .conflicting(preferred: true)),
-            (.lobby, 2, "2", .conflicting(preferred: false)),
-            (.lobby, 2, "", .stale),
-            (.game, 0, "3", .newer),
-            (.lobby, Int.max, "f", .stale),
-            (.game, 0, "3", .duplicate),
-            (.game, Int.max, "f", .differentTable),
-            (.game, 1, "1", .newer),
+        let events: [(String, TableRevision.Phase, Int, String, Bool)] = [
+            ("sequence", .lobby, 0, "2", true),
+            ("sequence", .lobby, 2, "2", true),
+            ("sequence", .lobby, 1, "3", false),
+            ("sequence", .lobby, 2, "2", true),
+            ("sequence", .lobby, 2, "1", false),
+            ("sequence", .lobby, 2, "f", true),
+            ("sequence", .lobby, 2, "2", false),
+            ("sequence", .lobby, 2, "", false),
+            ("sequence", .game, 0, "3", true),
+            ("sequence", .lobby, Int.max, "f", false),
+            ("sequence", .game, 0, "3", true),
+            ("foreign", .game, Int.max, "f", false),
+            ("sequence", .game, 1, "1", true),
         ]
         var latest: TableRevision?
-        for (phase, version, branch, expected) in events {
+        for (tableID, phase, version, branch, expected) in events {
             let received = TableRevision(
-                tableID: expected == .differentTable ? "foreign" : "sequence",
+                tableID: tableID,
                 phase: phase, version: version, branch: String(repeating: branch, count: 32)
             )
-            #expect(received.disposition(comparedTo: latest) == expected)
-            if let latest {
-                #expect(received.isOlder(than: latest)
-                        == (expected == .stale || expected == .conflicting(preferred: false)))
-                #expect(received.conflicts(with: latest)
-                        == (expected == .conflicting(preferred: false)
-                            || expected == .conflicting(preferred: true)))
-            }
-            switch expected {
-            case .firstSeen, .newer, .conflicting(preferred: true): latest = received
-            default: break
-            }
+            let accepted = latest.map { received.isSameOrNewer(than: $0) } ?? true
+            #expect(accepted == expected)
+            if accepted { latest = received }
         }
         #expect(latest?.phase == .game)
         #expect(latest?.version == 1)

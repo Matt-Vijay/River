@@ -1,250 +1,129 @@
 import XCTest
 
+@MainActor
 final class RiverInteractionTests: XCTestCase {
-    private var app: XCUIApplication!
+    private let app = XCUIApplication()
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         continueAfterFailure = false
-        app = XCUIApplication()
+        XCUIDevice.shared.orientation = .portrait
         app.launchArguments = ["-riverResetProfile"]
         app.launch()
     }
 
     func testLobbyToRaiseAndAllInActionFlow() {
+        defer { XCUIDevice.shared.orientation = .portrait }
         saveProfile(named: "Maverick")
-
-        let startGame = button("lobby.startGame", timeout: 3)
-        XCTAssertFalse(startGame.isEnabled)
-
-        let addPlayer = button("lobby.addPlayer")
-        assertLabel(addPlayer, equals: "Add player")
-        addPlayer.tap()
+        XCTAssertFalse(button("lobby.startGame").isEnabled)
         button("lobby.addPlayer").tap()
-        XCTAssertTrue(startGame.isEnabled)
-        startGame.tap()
+        button("lobby.addPlayer").tap()
+        XCTAssertTrue(button("lobby.startGame").isEnabled)
+        button("lobby.startGame").tap()
 
-        revealCurrentHand(expectedPlayer: "Maverick")
-        let fold = button("table.action.fold", timeout: 5)
-        assertLabel(anyElement("table.heroSeat"), contains: "Maverick")
-
+        revealCurrentHand(for: "Maverick")
         button("table.leave").tap()
         XCTAssertTrue(app.staticTexts[
             "Your current hand will be folded. You will sit out future hands."
         ].exists)
         button("table.leave.cancel").tap()
-        XCTAssertTrue(fold.waitForExistence(timeout: defaultTimeout))
 
-        let raise = button("table.action.raise.expand")
-        let heroSeatBeforeRaise = anyElement("table.heroSeat").frame
-        raise.tap()
-
-        let raiseSlider = app.sliders["table.raise.slider"]
-        XCTAssertTrue(raiseSlider.waitForExistence(timeout: defaultTimeout))
-        XCTAssertEqual(anyElement("table.heroSeat").frame.minY,
-                       heroSeatBeforeRaise.minY,
-                       accuracy: 1,
+        let heroFrame = element("table.heroSeat").frame
+        button("table.action.raise.expand").tap()
+        let slider = app.sliders["table.raise.slider"]
+        XCTAssertTrue(slider.waitForExistence(timeout: 2))
+        XCTAssertEqual(element("table.heroSeat").frame.minY, heroFrame.minY, accuracy: 1,
                        "Opening raise options must not shift the hero hand")
-        XCTAssertEqual(raiseAmountAfterAdjusting(raiseSlider, to: 0), 20)
-        XCTAssertGreaterThan(raiseAmountAfterAdjusting(raiseSlider, to: 1), 900)
-        raiseSlider.adjust(toNormalizedSliderPosition: 0.85)
-        let adjustedLabel = button("table.raise.submit").label
-
-        button("table.raise.preset.1bb").tap()
-        XCTAssertNotEqual(button("table.raise.submit").label, adjustedLabel)
-
+        slider.adjust(toNormalizedSliderPosition: 0.85)
+        XCTAssertNotEqual(button("table.raise.submit").label, "Raise to 20")
         button("table.raise.preset.pot").tap()
-        assertLabel(button("table.raise.submit"), equals: "Raise to 35")
+        XCTAssertEqual(button("table.raise.submit").label, "Raise to 35")
 
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertEqual(button("table.raise.submit").label, "Raise to 35")
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertEqual(button("table.raise.submit").label, "Raise to 35")
         button("table.raise.close").tap()
-
-        let reopenedRaise = button("table.action.raise.expand")
-        waitUntilHittable(reopenedRaise)
-        reopenedRaise.tap()
-
+        button("table.action.raise.expand").tap()
         button("table.raise.preset.allIn").tap()
-        let submitRaise = button("table.raise.submit")
-        assertLabel(submitRaise, equals: "Raise to 1,000")
-        submitRaise.tap()
+        XCTAssertEqual(button("table.raise.submit").label, "Raise to 1,000")
+        button("table.raise.submit").tap()
 
-        revealCurrentHand(expectedPlayer: "Guest 1")
-        let allInCall = button("table.action.call", timeout: 3)
-        assertLabel(allInCall, contains: "995")
-        allInCall.tap()
+        revealCurrentHand(for: "Guest 1")
+        XCTAssertTrue(button("table.action.call").label.contains("995"))
+        button("table.action.call").tap()
+        revealCurrentHand(for: "Guest 2")
+        button("table.action.fold").tap()
+        XCTAssertTrue(element("table.result").label.contains("won"))
 
-        revealCurrentHand(expectedPlayer: "Guest 2")
-        XCTAssertTrue(fold.waitForExistence(timeout: defaultTimeout))
-        fold.tap()
+        button("table.action.dealNext").tap()
+        button("table.handoff.reveal").tap()
+        XCTAssertTrue(element("table.holeCards").exists)
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(element("table.handoff").exists)
+        XCTAssertFalse(app.descendants(matching: .any)["table.holeCards"].exists)
+        button("table.handoff.reveal").tap()
 
-        assertLabel(anyElement("table.result", timeout: 3), contains: "won")
+        let resolve = app.buttons["table.timeout.resolve"]
+        XCTAssertTrue(resolve.waitForExistence(timeout: 35))
+        XCTAssertFalse(app.buttons["table.action.fold"].exists)
+        resolve.tap()
+        XCTAssertTrue(resolve.waitForNonExistence(timeout: 3))
     }
 
     func testProfileSaveGateAndLocalPersistence() {
-        XCTAssertTrue(app.staticTexts["Create profile"].waitForExistence(timeout: defaultTimeout))
-        let nameField = textField("profile.name", timeout: 5)
-
-        let saveProfile = app.buttons["profile.save"]
-        XCTAssertTrue(saveProfile.exists)
-        XCTAssertFalse(saveProfile.isEnabled)
-
-        let oversizedName = "ABCDEFGHIJKLMNOPQRSTUVWXYZZZ"
+        let field = app.textFields["profile.name"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertFalse(button("profile.save").isEnabled)
         let cappedName = "ABCDEFGHIJKLMNOPQRSTUVWX"
-        nameField.tap()
-        nameField.typeText(oversizedName)
-        waitForValue(nameField, equals: cappedName)
-
-        let foxAvatar = button("profile.avatar.9")
-        foxAvatar.tap()
-        assertLabel(foxAvatar, contains: "Selected character")
-
-        XCTAssertTrue(saveProfile.isEnabled)
-        saveProfile.tap()
-
-        assertLabel(anyElement("lobby.localSeat", timeout: 3), contains: cappedName)
+        field.tap()
+        field.typeText(cappedName + "YZZZ")
+        let bounded = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", cappedName), object: field)
+        XCTAssertEqual(XCTWaiter.wait(for: [bounded], timeout: 2), .completed)
+        button("profile.avatar.9").tap()
+        XCTAssertTrue(button("profile.avatar.9").label.contains("Selected character"))
+        XCTAssertTrue(button("profile.save").isEnabled)
+        button("profile.save").tap()
+        XCTAssertTrue(element("lobby.localSeat").label.contains(cappedName))
 
         app.terminate()
         app.launchArguments = []
         app.launch()
-
-        assertLabel(anyElement("lobby.localSeat", timeout: 3), contains: cappedName)
+        XCTAssertTrue(element("lobby.localSeat").label.contains(cappedName))
         XCTAssertFalse(app.textFields["profile.name"].exists)
     }
 
     private func saveProfile(named name: String) {
-        let nameField = textField("profile.name", timeout: 5)
-        nameField.tap()
-        nameField.typeText(name)
-
-        let saveProfile = button("profile.save")
-        XCTAssertTrue(saveProfile.isEnabled)
-        saveProfile.tap()
-
-        assertLabel(anyElement("lobby.localSeat", timeout: 3), contains: name)
+        let field = app.textFields["profile.name"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText(name)
+        XCTAssertTrue(button("profile.save").isEnabled)
+        button("profile.save").tap()
+        XCTAssertTrue(element("lobby.localSeat").label.contains(name))
     }
 
-    private var defaultTimeout: TimeInterval { 2 }
-
-    private func button(_ identifier: String,
-                        timeout: TimeInterval? = nil,
-                        file: StaticString = #filePath,
-                        line: UInt = #line) -> XCUIElement {
-        let element = app.buttons.matching(identifier: identifier).firstMatch
-        return require(element, timeout: timeout,
-                       message: "Missing button \(identifier)", file: file, line: line)
+    private func button(_ id: String) -> XCUIElement {
+        let button = app.buttons.matching(identifier: id).firstMatch
+        XCTAssertTrue(button.exists || button.waitForExistence(timeout: 3), "Missing button \(id)")
+        return button
     }
 
-    private func waitUntilHittable(_ element: XCUIElement,
-                                   file: StaticString = #filePath,
-                                   line: UInt = #line) {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "isHittable == true"),
-            object: element
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: defaultTimeout),
-                       .completed, "Element never became hittable", file: file, line: line)
-    }
-
-    private func textField(_ identifier: String,
-                           timeout: TimeInterval? = nil,
-                           file: StaticString = #filePath,
-        line: UInt = #line) -> XCUIElement {
-        let element = app.textFields[identifier]
-        return require(element, timeout: timeout,
-                       message: "Missing text field \(identifier)", file: file, line: line)
-    }
-
-    private func anyElement(_ identifier: String,
-                            timeout: TimeInterval? = nil,
-                            file: StaticString = #filePath,
-        line: UInt = #line) -> XCUIElement {
-        let element = app.descendants(matching: .any)[identifier]
-        return require(element, timeout: timeout,
-                       message: "Missing element \(identifier)", file: file, line: line)
-    }
-
-    private func require(_ element: XCUIElement,
-                         timeout: TimeInterval?,
-                         message: String,
-                         file: StaticString,
-                         line: UInt) -> XCUIElement {
-        XCTAssertTrue(element.exists || element.waitForExistence(timeout: timeout ?? defaultTimeout),
-                      message, file: file, line: line)
+    private func element(_ id: String) -> XCUIElement {
+        let element = app.descendants(matching: .any)[id]
+        XCTAssertTrue(element.exists || element.waitForExistence(timeout: 3), "Missing element \(id)")
         return element
     }
 
-    private func assertLabel(_ element: XCUIElement,
-                             contains expectedText: String,
-                             file: StaticString = #filePath,
-                             line: UInt = #line) {
-        XCTAssertTrue(element.label.localizedCaseInsensitiveContains(expectedText),
-                      "Expected '\(element.label)' to contain '\(expectedText)'",
-                      file: file,
-                      line: line)
-    }
-
-    private func assertLabel(_ element: XCUIElement,
-                             equals expectedText: String,
-                             file: StaticString = #filePath,
-                             line: UInt = #line) {
-        XCTAssertEqual(element.label, expectedText, file: file, line: line)
-    }
-
-    private func revealCurrentHand(expectedPlayer: String? = nil,
-                                   file: StaticString = #filePath,
-                                   line: UInt = #line) {
-        let handoff = anyElement("table.handoff", timeout: 3, file: file, line: line)
-        if let expectedPlayer {
-            assertLabel(handoff, contains: expectedPlayer, file: file, line: line)
-        }
+    private func revealCurrentHand(for player: String) {
+        XCTAssertTrue(element("table.handoff").label.contains(player))
         XCTAssertFalse(app.descendants(matching: .any)["table.holeCards"].exists,
-                       "Hole cards must remain absent until the current player reveals",
-                       file: file,
-                       line: line)
-        XCTAssertTrue(app.buttons["table.leave"].exists,
-                      "Players must be able to leave without revealing a hand",
-                      file: file,
-                      line: line)
-        let reveal = button("table.handoff.reveal", file: file, line: line)
-        waitUntilHittable(reveal, file: file, line: line)
-        reveal.tap()
-        XCTAssertTrue(
-            app.descendants(matching: .any)["table.holeCards"]
-                .waitForExistence(timeout: defaultTimeout),
-            "Hole cards did not appear after the handoff reveal",
-            file: file,
-            line: line
-        )
-    }
-
-    private func raiseAmountAfterAdjusting(_ slider: XCUIElement,
-                                           to normalizedPosition: CGFloat,
-                                           file: StaticString = #filePath,
-                                           line: UInt = #line) -> Int {
-        slider.adjust(toNormalizedSliderPosition: normalizedPosition)
-
-        let label = button("table.raise.submit", file: file, line: line).label
-        let amountText = label
-            .replacingOccurrences(of: "Raise to ", with: "")
-            .replacingOccurrences(of: ",", with: "")
-        guard let amount = Int(amountText) else {
-            XCTFail("Expected numeric raise label, got '\(label)'", file: file, line: line)
-            return -1
-        }
-
-        return amount
-    }
-
-    private func waitForValue(_ element: XCUIElement,
-                              equals expectedValue: String,
-                              timeout: TimeInterval? = nil,
-                              file: StaticString = #filePath,
-                              line: UInt = #line) {
-        let predicate = NSPredicate(format: "value == %@", expectedValue)
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
-        let result = XCTWaiter.wait(for: [expectation], timeout: timeout ?? defaultTimeout)
-        XCTAssertEqual(result, .completed,
-                       "Expected value '\(String(describing: element.value))' to equal '\(expectedValue)'",
-                       file: file,
-                       line: line)
+                       "Hole cards must remain absent until the current player reveals")
+        XCTAssertTrue(button("table.leave").exists)
+        button("table.handoff.reveal").tap()
+        XCTAssertTrue(element("table.holeCards").exists)
+        XCTAssertTrue(element("table.heroSeat").label.contains(player))
     }
 }

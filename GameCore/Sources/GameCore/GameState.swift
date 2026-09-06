@@ -64,7 +64,7 @@ public struct HandResult: Codable, Sendable, Equatable {
 /// The complete, serializable state of a poker hand. This is the single object
 /// that travels in the iMessage payload; every client renders from it.
 public struct GameState: Codable, Sendable, Equatable {
-    enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case tableID, handNumber, players, dealerIndex
         case smallBlind, bigBlind, board, deck, pot, street, currentToAct, minRaise
         case turnStartedAt, turnDuration, results, version

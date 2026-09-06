@@ -79,7 +79,12 @@ enum Identity {
             var candidate = base
             var suffix = 1
             while !seen.insert(candidate).inserted {
-                candidate = "\(base)-\(suffix)"
+                let ending = "-\(suffix)"
+                var prefix = base
+                while prefix.utf8.count + ending.utf8.count > maximumUTF8Length {
+                    prefix.removeLast()
+                }
+                candidate = prefix + ending
                 suffix += 1
             }
             copy.id = candidate
@@ -88,15 +93,31 @@ enum Identity {
     }
 }
 
-/// A locally authenticated Messages participant mapped to a stable table seat.
-/// The wire state never grants authority by itself: callers must construct this
-/// value from their local conversation identity before committing an operation.
+/// A table seat authorized by the caller's local identity or sender binding.
 public struct TableActor: Sendable, Equatable, Hashable {
     public let id: String
 
     public init?(_ id: String) {
         guard let id = Identity.actor(id) else { return nil }
         self.id = id
+    }
+}
+
+/// Messages UUIDs differ across devices. Bind each locally observed sender to
+/// their advertised table seat on first contact, then reject changed bindings.
+/// This is trust-on-first-use for casual play, not cryptographic identity proof.
+public struct TableParticipants: Codable, Sendable, Equatable {
+    private var seats: [String: String] = [:]
+
+    public init() {}
+
+    public mutating func bind(_ actor: TableActor, senderID: String, localID: String) -> Bool {
+        if senderID == localID { return actor.id == localID }
+        guard actor.id != localID else { return false }
+        if let known = seats[senderID] { return known == actor.id }
+        guard !seats.values.contains(actor.id) else { return false }
+        seats[senderID] = actor.id
+        return true
     }
 }
 
@@ -129,10 +150,10 @@ public struct TableRevision: Codable, Sendable, Equatable {
     }
 
     public func isOlder(than other: TableRevision) -> Bool {
-        switch disposition(comparedTo: other) {
-        case .stale, .conflicting(preferred: false): true
-        default: false
-        }
+        // Equal-version branches use a deterministic tie-break. An empty legacy
+        // fingerprint sorts before every current fingerprint automatically.
+        tableID == other.tableID
+            && (phase.rawValue, version, branch) < (other.phase.rawValue, other.version, other.branch)
     }
 
     public func isSameOrNewer(than other: TableRevision) -> Bool {
@@ -164,45 +185,6 @@ public struct TableRevision: Codable, Sendable, Equatable {
     }
 }
 
-public enum TableRevisionDisposition: Sendable, Equatable {
-    case firstSeen
-    case differentTable
-    case duplicate
-    case newer
-    case stale
-    /// Equal phase/version states created concurrently. `preferred` is a stable
-    /// digest tie-break, not proof that either sender was trustworthy.
-    case conflicting(preferred: Bool)
-}
-
-public extension TableRevision {
-    func disposition(comparedTo latest: TableRevision?) -> TableRevisionDisposition {
-        guard let latest else { return .firstSeen }
-        guard tableID == latest.tableID else { return .differentTable }
-        if phase != latest.phase {
-            return phase.rawValue > latest.phase.rawValue ? .newer : .stale
-        }
-        if version != latest.version { return version > latest.version ? .newer : .stale }
-        if branch == latest.branch { return .duplicate }
-
-        // A missing branch comes from the pre-fingerprint revision-store format.
-        // Prefer a known fingerprint without surfacing a false conflict during
-        // migration.
-        if latest.branch.isEmpty { return .newer }
-        if branch.isEmpty { return .stale }
-        return .conflicting(preferred: branch > latest.branch)
-    }
-
-    func conflicts(with other: TableRevision) -> Bool {
-        guard tableID == other.tableID,
-              phase == other.phase,
-              version == other.version,
-              !branch.isEmpty,
-              !other.branch.isEmpty else { return false }
-        return branch != other.branch
-    }
-}
-
 /// What a conversation's message carries: either the lobby (pre-game) or a live
 /// game state. The whole thing travels in the `MSMessage.url`.
 public enum TableMessage: Sendable, Equatable {
@@ -213,49 +195,26 @@ public enum TableMessage: Sendable, Equatable {
 extension TableMessage: Codable {
     private static let currentWireVersion = 2
 
-    private enum CodingKeys: String, CodingKey { case wireVersion, integrity, lobby, game }
-
-    private enum PayloadCodingKeys: String, CodingKey { case value = "_0" }
-
-    private struct AnyCodingKey: CodingKey {
-        let stringValue: String
-        let intValue: Int? = nil
-
-        init?(stringValue: String) { self.stringValue = stringValue }
-        init?(intValue: Int) { return nil }
-    }
+    private enum CodingKeys: String, CodingKey, CaseIterable { case wireVersion, integrity, lobby, game }
+    private enum PayloadCodingKeys: String, CodingKey, CaseIterable { case value = "_0" }
 
     public init(from decoder: Decoder) throws {
-        let shape = try decoder.container(keyedBy: AnyCodingKey.self)
-        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let container = try decoder.container(validatingKeys: CodingKeys.self)
         let wireVersion = try container.decodeIfPresent(Int.self, forKey: .wireVersion) ?? 0
         guard (0...Self.currentWireVersion).contains(wireVersion) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .wireVersion, in: container,
                 debugDescription: "Unsupported table message wire version")
         }
-        let allowedKeys: Set<String> = wireVersion == Self.currentWireVersion
-            ? [CodingKeys.wireVersion.rawValue, CodingKeys.integrity.rawValue,
-               CodingKeys.lobby.rawValue, CodingKeys.game.rawValue]
-            : [CodingKeys.wireVersion.rawValue, CodingKeys.lobby.rawValue,
-               CodingKeys.game.rawValue]
-        guard Set(shape.allKeys.map(\.stringValue)).isSubset(of: allowedKeys) else {
-            throw DecodingError.dataCorrupted(
-                .init(codingPath: container.codingPath,
-                      debugDescription: "Unknown table message fields"))
-        }
-
         let decoded: TableMessage
         switch (container.contains(.lobby), container.contains(.game)) {
         case (true, false):
-            try Self.validatePayloadShape(for: .lobby, in: container)
-            let payload = try container.nestedContainer(
-                keyedBy: PayloadCodingKeys.self, forKey: .lobby)
+            let payload = try container.superDecoder(forKey: .lobby)
+                .container(validatingKeys: PayloadCodingKeys.self)
             decoded = .lobby(try payload.decode(Lobby.self, forKey: .value))
         case (false, true):
-            try Self.validatePayloadShape(for: .game, in: container)
-            let payload = try container.nestedContainer(
-                keyedBy: PayloadCodingKeys.self, forKey: .game)
+            let payload = try container.superDecoder(forKey: .game)
+                .container(validatingKeys: PayloadCodingKeys.self)
             decoded = .game(try payload.decode(GameState.self, forKey: .value))
         default:
             throw DecodingError.dataCorrupted(
@@ -303,17 +262,6 @@ extension TableMessage: Codable {
         }
     }
 
-    private static func validatePayloadShape(
-        for key: CodingKeys, in container: KeyedDecodingContainer<CodingKeys>
-    ) throws {
-        let decoder = try container.superDecoder(forKey: key)
-        let payload = try decoder.container(keyedBy: AnyCodingKey.self)
-        guard payload.allKeys.map(\.stringValue) == [PayloadCodingKeys.value.rawValue] else {
-            throw DecodingError.dataCorrupted(
-                .init(codingPath: payload.codingPath,
-                      debugDescription: "Invalid table payload wrapper"))
-        }
-    }
 }
 
 extension TableMessage {
@@ -343,11 +291,8 @@ extension TableMessage {
         latestRevision: TableRevision? = nil, now: Date = Date()
     ) -> TableOperationResult {
         let revision = revision
-        switch revision.disposition(comparedTo: latestRevision) {
-        case .differentTable, .stale, .conflicting(preferred: false):
+        if let latestRevision, !revision.isSameOrNewer(than: latestRevision) {
             return .rejected(.stale)
-        default:
-            break
         }
 
         let result = switch self {

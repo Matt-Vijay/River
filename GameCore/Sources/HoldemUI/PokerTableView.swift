@@ -94,66 +94,48 @@ public struct PokerTableView: View {
     }
 
     public var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+        TimelineView(.animation(minimumInterval: 1, paused: context.state.isHandComplete)) { timeline in
             table.environment(\.tableNow, timeline.date)
         }
     }
 
     private var table: some View {
         GeometryReader { geometry in
-            let seats = PokerTableSeatsRow(context: context)
-            let controls = PokerTableBottomControls(context: context, onOperation: onOperation)
-            let heroDock = HeroHandDock(context: context)
+            let landscape = geometry.size.width > geometry.size.height
+            let layout = landscape
+                ? AnyLayout(HStackLayout(alignment: .bottom, spacing: 24))
+                : AnyLayout(VStackLayout(spacing: 0))
 
-            if geometry.size.width > geometry.size.height {
-                ScrollView(.vertical) {
-                    HStack(alignment: .bottom, spacing: 24) {
-                        VStack(spacing: 12) {
-                            seats
-                                .padding(.leading, 52)
-
-                            tableBoard
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                        VStack(spacing: 16) {
-                            controls
-                            heroDock
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .frame(minHeight: geometry.size.height)
-                }
-                .scrollIndicators(.hidden)
-            } else {
-                ScrollView(.vertical) {
-                    VStack(spacing: 0) {
-                        seats
-                            .padding(.top, 12)
+            ScrollView(.vertical) {
+                layout {
+                    VStack(spacing: landscape ? 12 : 0) {
+                        PokerTableSeatsRow(context: context)
+                            .padding(.top, landscape ? 0 : 12)
                             .padding(.leading, 52)
-
-                        Spacer(minLength: 16)
-
-                        tableBoard
-                            .padding(.horizontal, 20)
-
-                        Spacer(minLength: 16)
-
-                        controls.padding(.horizontal, 20)
-
-                        heroDock
-                            .padding(.horizontal, 20)
-                            .padding(.top, 16)
+                        if !landscape { Spacer(minLength: 16) }
+                        BoardView(board: context.state.board, pot: context.state.displayPot,
+                                  winningCards: context.winningCards,
+                                  handLabel: context.showdownHandLabel)
+                            .padding(.horizontal, landscape ? 0 : 20)
                     }
-                    .padding(.bottom, 28)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .frame(minHeight: geometry.size.height)
+
+                    if !landscape { Spacer(minLength: 16) }
+
+                    VStack(spacing: 16) {
+                        PokerTableBottomControls(context: context, onOperation: onOperation)
+                        HeroHandDock(context: context)
+                    }
+                    .padding(.horizontal, landscape ? 0 : 20)
+                    .frame(maxWidth: .infinity)
                 }
-                .defaultScrollAnchor(.bottom)
-                .scrollIndicators(.hidden)
+                .padding(.horizontal, landscape ? 20 : 0)
+                .padding(.top, landscape ? 12 : 0)
+                .padding(.bottom, landscape ? 12 : 28)
+                .frame(minHeight: geometry.size.height)
             }
+            .defaultScrollAnchor(landscape ? .top : .bottom)
+            .scrollIndicators(.hidden)
         }
         .background(Theme.background)
         .overlay(alignment: .topLeading) {
@@ -163,10 +145,6 @@ public struct PokerTableView: View {
         }
     }
 
-    private var tableBoard: some View {
-        BoardView(board: context.state.board, pot: context.state.displayPot,
-                  winningCards: context.winningCards, handLabel: context.showdownHandLabel)
-    }
 }
 
 private struct PokerTableBottomControls: View {
@@ -197,7 +175,7 @@ private struct PokerTableBottomControls: View {
             VStack(spacing: 10) {
                 if let resultText { ResultBanner(text: resultText) }
                 PrimaryActionButton(title: "Deal next hand",
-                                    accessibilityID: HoldemAccessibility.Table.dealNext,
+                                    accessibilityID: "table.action.dealNext",
                                     action: {
                                         onOperation(.dealNextHand(
                                             seed: UInt64.random(in: .min ... .max)))
@@ -209,7 +187,7 @@ private struct PokerTableBottomControls: View {
             VStack(spacing: 10) {
                 ResultBanner(text: "Turn expired")
                 PrimaryActionButton(title: "Resolve turn",
-                                    accessibilityID: HoldemAccessibility.Table.resolveTimeout,
+                                    accessibilityID: "table.timeout.resolve",
                                     action: { onOperation(.resolveTimeout) })
             }
         } else if context.state.isCurrentPlayer(at: context.heroIndex), legal.canFold {
@@ -229,7 +207,7 @@ private struct PokerTableBottomControls: View {
                         .strokeBorder(Theme.controlStroke, lineWidth: 1)
                 )
                 .accessibilityLabel(waitingText)
-                .accessibilityIdentifier(HoldemAccessibility.Table.waiting)
+                .accessibilityIdentifier("table.waiting")
         }
     }
 
@@ -267,7 +245,7 @@ private struct ResultBanner: View {
             .frame(minHeight: Theme.Metrics.actionControlHeight)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(text)
-            .accessibilityIdentifier(HoldemAccessibility.Table.result)
+            .accessibilityIdentifier("table.result")
     }
 }
 

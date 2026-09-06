@@ -14,7 +14,7 @@ also provides standalone pass-and-play for local gameplay and UI iteration.
 
 ## Requirements
 
-- Xcode 16 or newer
+- Xcode 16 or newer (Swift 6 language mode throughout)
 - iOS 17 or newer
 
 ## Build
@@ -52,6 +52,9 @@ xcodebuild \
 
 Run real Messages-host interactions:
 
+Use a simulator with the synthetic `+1 (888) 555-1212` conversation. The test
+intentionally refuses to select other recipients.
+
 ```sh
 xcodebuild \
   -project River.xcodeproj \
@@ -62,13 +65,18 @@ xcodebuild \
 ```
 
 Simulator validates extension discovery, profile persistence, and sender-side
-table creation. Recipient delivery still requires two signed-in devices.
+send/open/leave/rejoin. Recipient delivery still requires two signed-in devices.
 
 ## Product Contract
 
 - Players configure and locally save their handle and avatar before opening a table.
 - Opening a lobby invitation seats the player; merely receiving an update never sends an action.
 - Participant identity comes from Messages; players never relabel themselves inside a lobby.
+- Messages participant IDs are device-local. Each device persists sender-to-seat
+  bindings on first contact and rejects later identity changes or seat collisions.
+  This is an honest-client, trust-on-first-use game, not cryptographic anti-cheat;
+  the encoded state also contains the undealt deck and hole cards.
 - Every mutation is validated against table identity, phase, revision, actor, and legal state.
-- Only successful sends advance the locally remembered revision.
+- Successful sends and accepted incoming states advance the remembered revision;
+  optimistic or failed sends do not.
 - Invalid, stale, rejected, and failed updates produce an explicit recovery screen.

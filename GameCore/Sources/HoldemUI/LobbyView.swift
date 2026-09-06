@@ -61,7 +61,7 @@ public struct LobbyView: View {
             PrimaryActionButton(
                 title: "Start game",
                 isDisabled: !canStart,
-                accessibilityID: HoldemAccessibility.Lobby.startGame,
+                accessibilityID: "lobby.startGame",
                 action: {
                     onOperation(.startGame(
                         seed: UInt64.random(in: .min ... .max),
@@ -79,16 +79,14 @@ public struct LobbyView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableButtonStyle())
-                .accessibilityIdentifier(HoldemAccessibility.Lobby.addPlayer)
+                .accessibilityIdentifier("lobby.addPlayer")
             }
 
             if isSeated, onAddPlayer == nil {
                 LeaveTableButton(
                     consequence: "You will give up your seat in the lobby.",
                     style: .text,
-                    accessibilityID: HoldemAccessibility.Lobby.leave,
-                    confirmAccessibilityID: HoldemAccessibility.Lobby.confirmLeave,
-                    cancelAccessibilityID: HoldemAccessibility.Lobby.cancelLeave,
+                    accessibilityID: "lobby.leave",
                     action: { onOperation(.leaveLobby) }
                 )
             }
@@ -116,6 +114,6 @@ private struct LobbySeatRow: View {
         .controlSurface(stroke: isLocal ? Theme.accent.opacity(0.8) : .clear)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(isLocal ? "\(seat.name), your seat" : seat.name)
-        .accessibilityIdentifier(isLocal ? HoldemAccessibility.Lobby.localSeat : "")
+        .accessibilityIdentifier(isLocal ? "lobby.localSeat" : "")
     }
 }

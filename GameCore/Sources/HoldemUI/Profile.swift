@@ -49,7 +49,7 @@ public struct ProfileSetupView: View {
                             .buttonStyle(.plain)
                             .accessibilityLabel(isSelected ? "Selected character \(emoji)" : "Choose character \(emoji)")
                             .accessibilityAddTraits(isSelected ? .isSelected : [])
-                            .accessibilityIdentifier(HoldemAccessibility.Profile.avatar(index))
+                            .accessibilityIdentifier("profile.avatar.\(index)")
                         }
                     }
                 }
@@ -62,7 +62,7 @@ public struct ProfileSetupView: View {
             PrimaryActionButton(
                 title: "Save profile",
                 isDisabled: profile == nil,
-                accessibilityID: HoldemAccessibility.Profile.save,
+                accessibilityID: "profile.save",
                 action: saveProfile
             )
             .padding(.horizontal, 20)
@@ -87,16 +87,14 @@ public struct ProfileSetupView: View {
                 .autocorrectionDisabled()
                 .submitLabel(.done)
                 .focused($isHandleFocused)
-                .onSubmit {
-                    if profile != nil { saveProfile() }
-                }
+                .onSubmit(saveProfile)
                 .font(.headline)
                 .foregroundStyle(.white)
                 .accessibilityLabel("Handle")
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .controlSurface()
-                .accessibilityIdentifier(HoldemAccessibility.Profile.nameField)
+                .accessibilityIdentifier("profile.name")
                 .onChange(of: name) {
                     let bounded = ProfileText.boundedEditingName(name)
                     if bounded != name {

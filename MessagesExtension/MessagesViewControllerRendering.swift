@@ -9,71 +9,22 @@ extension MessagesViewController {
             renderProfileSetup()
             return
         }
-        let source = displayedSourceMessage(in: conversation)
-        let selectedMessage = authenticatedTableMessage(from: source, in: conversation)
+        let selectedMessage = displayedSource(in: conversation)?.content ?? .none
         render(selectedMessage,
                profile: configuredProfile,
                conversation: conversation)
     }
 
-    func displayedSourceMessage(in conversation: MSConversation) -> MSMessage? {
+    func displayedSource(in conversation: MSConversation) -> MessageSource? {
         if let activeSend,
            activeSend.conversation === conversation,
-           !supersedes(
-               sourceMessageOverride,
-               baseline: activeSend.outgoingMessage,
-               in: conversation
-           ) {
-            return activeSend.outgoingMessage
+           sourceOverride?.supersedes(activeSend.outgoing) != true {
+            return activeSend.outgoing
         }
-        return sourceMessageOverride ?? conversation.selectedMessage
-    }
-
-    func supersedes(
-        _ candidate: MSMessage?,
-        baseline: MSMessage,
-        in conversation: MSConversation
-    ) -> Bool {
-        guard case .message(let baselineMessage) = authenticatedTableMessage(
-            from: baseline,
-            in: conversation
-        ), case .message(let candidateMessage) = authenticatedTableMessage(
-            from: candidate,
-            in: conversation,
-            predecessor: baselineMessage
-        ) else {
-            return false
+        return sourceOverride ?? conversation.selectedMessage.map {
+            MessageSource(receiving: $0, localID: conversation.localParticipantIdentifier.uuidString,
+                          history: history)
         }
-        let candidateRevision = candidateMessage.revision
-        let baselineRevision = baselineMessage.revision
-        return candidateRevision.tableID != baselineRevision.tableID
-            || baselineRevision.isOlder(than: candidateRevision)
-    }
-
-    func shouldDisplayReceived(_ message: MSMessage, in conversation: MSConversation) -> Bool {
-        guard let displayed = displayedSourceMessage(in: conversation) else {
-            guard case .message = authenticatedTableMessage(
-                from: message,
-                in: conversation
-            ) else { return false }
-            return true
-        }
-        let currentPayload = authenticatedTableMessage(from: displayed, in: conversation)
-        if let current = currentPayload.decodedMessage {
-            guard case .message(let incoming) = authenticatedTableMessage(
-                from: message,
-                in: conversation,
-                predecessor: current
-            ) else { return false }
-            let currentRevision = current.revision
-            let incomingRevision = incoming.revision
-            return incomingRevision.tableID == currentRevision.tableID
-                && incomingRevision.isSameOrNewer(than: currentRevision)
-        }
-        guard case .message = authenticatedTableMessage(from: message, in: conversation) else {
-            return false
-        }
-        return message.session != nil && message.session == displayed.session
     }
 
     private func render(_ selectedMessage: SelectedTableMessage,
@@ -99,10 +50,11 @@ extension MessagesViewController {
                 tableID: message.revision.tableID
             )
         case .message(let message):
+            let revision = message.revision
             let isOptimistic = activeSend?.conversation === conversation
-                && activeSend?.sentRevision == message.revision
+                && activeSend?.sentRevision == revision
             if !isOptimistic {
-                guard revisionStore.observe(message.revision) else {
+                guard history.observe(revision) else {
                     showStale(message)
                     return
                 }

@@ -47,10 +47,7 @@ struct HandRank: Comparable, Sendable {
 
     static func < (lhs: HandRank, rhs: HandRank) -> Bool {
         if lhs.category != rhs.category { return lhs.category < rhs.category }
-        for (a, b) in zip(lhs.tiebreakers, rhs.tiebreakers) where a != b {
-            return a < b
-        }
-        return lhs.tiebreakers.count < rhs.tiebreakers.count
+        return lhs.tiebreakers.lexicographicallyPrecedes(rhs.tiebreakers)
     }
 }
 
@@ -99,91 +96,45 @@ enum HandEvaluator {
     /// Ranks 1-5 cards directly. Five-card categories remain unavailable until
     /// enough cards exist, which supports the live pre-river hand indicator.
     private static func evaluateFive(_ cards: [Card]) -> HandRank {
-        precondition((1...5).contains(cards.count))
-        let features = Features(cards: cards)
-        let classification = classify(features)
-        return HandRank(category: classification.category,
-                        tiebreakers: classification.tiebreakers,
-                        bestFive: features.bestFive)
-    }
-
-    private static func classify(_ features: Features) -> (
-        category: HandCategory,
-        tiebreakers: [Int]
-    ) {
-        let groups = features.groups
-
-        if let straightHigh = features.straightHigh, features.isFlush {
-            return (.straightFlush, [straightHigh])
-        }
-        if groups[0].count == 4 {
-            return (.fourOfAKind,
-                    [groups[0].rank] + features.kickers(excluding: groups[0].rank))
-        }
-        if groups[0].count == 3, groups.count >= 2, groups[1].count >= 2 {
-            return (.fullHouse, [groups[0].rank, groups[1].rank])
-        }
-        if features.isFlush {
-            return (.flush, features.ranksDescending)
-        }
-        if let straightHigh = features.straightHigh {
-            return (.straight, [straightHigh])
-        }
-        if groups[0].count == 3 {
-            return (.threeOfAKind,
-                    [groups[0].rank] + features.kickers(excluding: groups[0].rank))
-        }
-        if groups[0].count == 2, groups.count >= 2, groups[1].count == 2 {
-            let highPair = groups[0].rank
-            let lowPair = groups[1].rank
-            return (.twoPair,
-                    [highPair, lowPair] + features.kickers(excluding: highPair, and: lowPair))
-        }
-        if groups[0].count == 2 {
-            return (.pair,
-                    [groups[0].rank] + features.kickers(excluding: groups[0].rank))
-        }
-        return (.highCard, features.ranksDescending)
-    }
-
-    private struct Features {
-        let ranksDescending: [Int]
-        let groups: [(rank: Int, count: Int)]
-        let isFlush: Bool
-        let straightHigh: Int?
-        let bestFive: [Card]
-
-        init(cards: [Card]) {
-            ranksDescending = cards.map { $0.rank.rawValue }.sorted(by: >)
-            var groups: [(rank: Int, count: Int)] = []
-            for rank in ranksDescending {
-                if let last = groups.indices.last, groups[last].rank == rank {
-                    groups[last].count += 1
-                } else {
-                    groups.append((rank, 1))
-                }
-            }
-            self.groups = groups.sorted {
-                $0.count != $1.count ? $0.count > $1.count : $0.rank > $1.rank
-            }
-            isFlush = cards.count == 5 && cards.dropFirst().allSatisfy { $0.suit == cards[0].suit }
-            straightHigh = HandEvaluator.straightHigh(in: ranksDescending)
-            bestFive = cards.sorted(by: >)
+        let ranks = cards.map(\.rank.rawValue).sorted(by: >)
+        let groups = Dictionary(grouping: ranks, by: { $0 })
+            .map { (rank: $0.key, count: $0.value.count) }
+            .sorted { $0.count != $1.count ? $0.count > $1.count : $0.rank > $1.rank }
+        let isFlush = cards.count == 5 && cards.allSatisfy { $0.suit == cards[0].suit }
+        let straightHigh: Int? = if ranks == [14, 5, 4, 3, 2] {
+            5
+        } else if groups.count == 5, ranks[0] - ranks[4] == 4 {
+            ranks[0]
+        } else {
+            nil
         }
 
-        func kickers(excluding first: Int, and second: Int? = nil) -> [Int] {
-            ranksDescending.filter { $0 != first && $0 != second }
+        // Multiplicity, then rank, is the tie order for every grouped hand.
+        // Flush/high-card ranks are already unique; only straights collapse to one high card.
+        var tiebreakers = groups.map(\.rank)
+        let category: HandCategory
+        if let straightHigh, isFlush {
+            category = .straightFlush
+            tiebreakers = [straightHigh]
+        } else if groups[0].count == 4 {
+            category = .fourOfAKind
+        } else if groups[0].count == 3, groups.count == 2, groups[1].count == 2 {
+            category = .fullHouse
+        } else if isFlush {
+            category = .flush
+        } else if let straightHigh {
+            category = .straight
+            tiebreakers = [straightHigh]
+        } else if groups[0].count == 3 {
+            category = .threeOfAKind
+        } else if groups[0].count == 2, groups.count >= 2, groups[1].count == 2 {
+            category = .twoPair
+        } else if groups[0].count == 2 {
+            category = .pair
+        } else {
+            category = .highCard
         }
-    }
-
-    private static func straightHigh(in ranksDescending: [Int]) -> Int? {
-        guard ranksDescending.count == 5 else { return nil }
-        if ranksDescending[0] - ranksDescending[4] == 4,
-           zip(ranksDescending, ranksDescending.dropFirst()).allSatisfy({ $0 == $1 + 1 }) {
-            return ranksDescending[0]
-        }
-        if ranksDescending == [14, 5, 4, 3, 2] { return 5 }
-        return nil
+        return HandRank(category: category, tiebreakers: tiebreakers, bestFive: cards.sorted(by: >))
     }
 }
 

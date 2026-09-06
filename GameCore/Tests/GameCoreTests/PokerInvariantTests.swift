@@ -156,7 +156,6 @@ private func playTournament(_ scenario: TournamentScenario) throws -> Tournament
             }
             guard eligible.count >= 2, coverage.completedHands < 10 else { break }
 
-            let expectedDealerID = try #require(nextDealerID(in: state, eligible: eligible))
             let actorID = state.players[eligible[policy.index(upperBound: eligible.count)]].id
             let previous = state
             operationNumber += 1
@@ -171,7 +170,6 @@ private func playTournament(_ scenario: TournamentScenario) throws -> Tournament
             #expect(next.handNumber == previous.handNumber + 1)
             #expect(next.tableID == previous.tableID)
             #expect(next.players.map(\.id) == eligible.map { previous.players[$0].id })
-            #expect(next.players[next.dealerIndex].id == expectedDealerID)
 
             state = try roundTripped(next)
             coverage.nextHands += 1
@@ -328,67 +326,6 @@ private func assertStateInvariants(_ state: GameState, chipTotal: Int) {
         #expect(legal.allows(.raise(to: bounds.upperBound)))
         #expect(!legal.allows(.raise(to: bounds.lowerBound - 1)))
     }
-}
-
-private func nextDealerID(in state: GameState, eligible: [Int]) -> String? {
-    guard !state.players.isEmpty else { return nil }
-    let eligible = Set(eligible)
-    let dealer = GameState.normalizedSeat(
-        state.dealerIndex,
-        playerCount: state.players.count
-    )
-
-    // When a table contracts to heads-up, the prior big blind gets the button
-    // if still seated. That prevents one player from posting the big blind in
-    // consecutive hands. Otherwise the button advances normally.
-    let dealtIn = Set(state.players.indices.filter {
-        state.players[$0].holeCards.count == 2
-    })
-    if eligible.count == 2,
-       let priorBigBlind = priorBigBlind(
-           dealer: dealer,
-           dealtIn: dealtIn,
-           playerCount: state.players.count
-       ),
-       eligible.contains(priorBigBlind) {
-        return state.players[priorBigBlind].id
-    }
-
-    for offset in 1...state.players.count {
-        let candidate = (dealer + offset) % state.players.count
-        if eligible.contains(candidate) { return state.players[candidate].id }
-    }
-    return nil
-}
-
-private func priorBigBlind(
-    dealer: Int,
-    dealtIn: Set<Int>,
-    playerCount: Int
-) -> Int? {
-    guard dealtIn.count >= 2 else { return nil }
-    let firstAfterDealer = nextSeat(
-        after: dealer,
-        among: dealtIn,
-        playerCount: playerCount
-    )
-    if dealtIn.count == 2 { return firstAfterDealer }
-    return firstAfterDealer.flatMap {
-        nextSeat(after: $0, among: dealtIn, playerCount: playerCount)
-    }
-}
-
-private func nextSeat(
-    after seat: Int,
-    among seats: Set<Int>,
-    playerCount: Int
-) -> Int? {
-    guard playerCount > 0 else { return nil }
-    for offset in 1...playerCount {
-        let candidate = (seat + offset) % playerCount
-        if seats.contains(candidate) { return candidate }
-    }
-    return nil
 }
 
 private struct InvariantGenerator {

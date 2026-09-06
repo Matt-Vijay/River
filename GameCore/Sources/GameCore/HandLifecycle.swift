@@ -14,23 +14,26 @@ extension GameState {
         now: Date = Date()
     ) -> GameState {
         let blinds = TableRules.normalizedBlinds(smallBlind: smallBlind, bigBlind: bigBlind)
-        var players = preparedPlayersForNewHand(
-            Identity.uniquePlayers(Array(input.prefix(TableRules.maxPlayers)))
-        )
-        let dealerIndex = activeDealerIndex(preferred: dealerIndex, players: players)
-        var deck = Card.shuffledDeck(seed: seed)
-        let dealOrder = dealOrder(players: players, dealerIndex: dealerIndex)
-        dealHoleCards(to: &players, deck: &deck, dealOrder: dealOrder)
+        var players = Identity.uniquePlayers(Array(input.prefix(TableRules.maxPlayers)))
+        for index in players.indices {
+            players[index].bet = 0
+            players[index].committed = 0
+            players[index].holeCards = []
+            players[index].lastActionBet = nil
+            players[index].lastAction = nil
+            players[index].status = players[index].isEligibleForNextHand
+                ? .active : players[index].hasLeft ? .sittingOut : .eliminated
+        }
 
         var state = GameState(
             tableID: Identity.normalized(tableID),
             handNumber: max(1, handNumber),
             players: players,
-            dealerIndex: dealerIndex,
+            dealerIndex: normalizedSeat(dealerIndex, playerCount: players.count),
             smallBlind: blinds.smallBlind,
             bigBlind: blinds.bigBlind,
             board: [],
-            deck: deck,
+            deck: Card.shuffledDeck(seed: seed),
             street: .preflop,
             currentToAct: nil,
             minRaise: blinds.bigBlind,
@@ -40,60 +43,18 @@ extension GameState {
             version: 0
         )
 
+        state.dealerIndex = state.nextSeat(after: state.dealerIndex - 1) { $0.canAct }
+            ?? state.dealerIndex
+        let dealOrder = players.indices.filter { players[$0].canAct }
+            .sorted { state.seatOrder($0) < state.seatOrder($1) }
+        // Two rounds left of the dealer. A fresh 52-card deck always covers six seats.
+        for _ in 0..<2 {
+            for seat in dealOrder {
+                state.players[seat].holeCards.append(state.deck.removeFirst())
+            }
+        }
         state.openFirstBettingRound(now: now)
         return state
-    }
-
-    private static func activeDealerIndex(preferred: Int, players: [Player]) -> Int {
-        let preferred = normalizedSeat(preferred, playerCount: players.count)
-        if players.isEmpty || players[preferred].canAct {
-            return preferred
-        }
-        for offset in 1..<players.count {
-            let candidate = (preferred + offset) % players.count
-            if players[candidate].canAct {
-                return candidate
-            }
-        }
-        return preferred
-    }
-
-    private static func preparedPlayersForNewHand(_ input: [Player]) -> [Player] {
-        var players = input
-        for index in players.indices {
-            players[index].bet = 0
-            players[index].committed = 0
-            players[index].holeCards = []
-            players[index].lastActionBet = nil
-            players[index].lastAction = nil
-            players[index].status = statusForFreshHand(players[index])
-        }
-        return players
-    }
-
-    private static func statusForFreshHand(_ player: Player) -> PlayerStatus {
-        if player.isEligibleForNextHand { return .active }
-        return player.hasLeft ? .sittingOut : .eliminated
-    }
-
-    private static func dealOrder(players: [Player], dealerIndex: Int) -> [Int] {
-        guard !players.isEmpty else { return [] }
-        var order: [Int] = []
-        for offset in 1...players.count {
-            let seat = (dealerIndex + offset) % players.count
-            if players[seat].canAct { order.append(seat) }
-        }
-        return order
-    }
-
-    private static func dealHoleCards(to players: inout [Player], deck: inout [Card],
-                                      dealOrder: [Int]) {
-        for _ in 0..<2 {
-            for seatIndex in dealOrder {
-                guard let card = deck.dealTopIfAvailable() else { return }
-                players[seatIndex].holeCards.append(card)
-            }
-        }
     }
 
     mutating func openFirstBettingRound(now: Date) {

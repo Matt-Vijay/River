@@ -36,29 +36,29 @@ struct ActionBarView: View {
         actionLayout {
             if legal.canFold {
                 actionButton(title: "Fold",
-                             accessibilityID: HoldemAccessibility.Table.fold,
+                             accessibilityID: "table.action.fold",
                              destructive: true,
                              action: { onAction(.fold) })
             }
             if legal.canCheck {
                 actionButton(title: "Check",
-                             accessibilityID: HoldemAccessibility.Table.check,
+                             accessibilityID: "table.action.check",
                              action: { onAction(.check) })
             } else if legal.canCall {
                 actionButton(title: "Call \(ChipText.string(legal.callAmount))",
-                             accessibilityID: HoldemAccessibility.Table.call,
+                             accessibilityID: "table.action.call",
                              action: { onAction(.call) })
             }
             if let raiseBounds = legal.raiseBounds {
                 if raiseBounds.lowerBound == raiseBounds.upperBound {
                     actionButton(
                         title: "All in \(ChipText.string(raiseBounds.lowerBound))",
-                        accessibilityID: HoldemAccessibility.Table.allIn,
+                        accessibilityID: "table.action.allIn",
                         action: { onAction(.raise(to: raiseBounds.lowerBound)) }
                     )
                 } else {
                     actionButton(title: "Raise",
-                                 accessibilityID: HoldemAccessibility.Table.expandRaise,
+                                 accessibilityID: "table.action.raise.expand",
                                  action: { raising = true })
                         .accessibilityHint("Opens raise amount controls")
                 }
@@ -102,24 +102,7 @@ private struct RaisePanelView: View {
     let onRaise: (Int) -> Void
     let onClose: () -> Void
 
-    @State private var raiseTo: Double
-
-    init(raiseBounds: ClosedRange<Int>,
-         currentBet: Int,
-         callAmount: Int,
-         bigBlind: Int,
-         pot: Int,
-         onRaise: @escaping (Int) -> Void,
-         onClose: @escaping () -> Void) {
-        self.raiseBounds = raiseBounds
-        self.currentBet = currentBet
-        self.callAmount = callAmount
-        self.bigBlind = bigBlind
-        self.pot = pot
-        self.onRaise = onRaise
-        self.onClose = onClose
-        _raiseTo = State(initialValue: Double(raiseBounds.lowerBound))
-    }
+    @State private var raiseTo = 0
 
     var body: some View {
         VStack(spacing: 10) {
@@ -140,40 +123,43 @@ private struct RaisePanelView: View {
                 }
                 .buttonStyle(PressableButtonStyle())
                 .accessibilityLabel("Close raise options")
-                .accessibilityIdentifier(HoldemAccessibility.Table.closeRaise)
+                .accessibilityIdentifier("table.raise.close")
             }
 
-            Slider(value: $raiseTo,
+            Slider(value: Binding(
+                       get: { Double(selectedRaiseTo) },
+                       set: { setRaise(Int($0)) }
+                   ),
                    in: Double(raiseBounds.lowerBound)...Double(raiseBounds.upperBound),
                    step: 1)
                 .tint(.white)
                 .accessibilityLabel("Raise amount")
                 .accessibilityValue(selectedRaiseText)
-                .accessibilityIdentifier(HoldemAccessibility.Table.raiseSlider)
+                .accessibilityIdentifier("table.raise.slider")
 
             VStack(spacing: 8) {
                 presetLayout {
                     presetButton(title: "+1 BB",
-                                 accessibilityID: HoldemAccessibility.Table.raisePreset("1bb")) {
+                                 accessibilityID: "table.raise.preset.1bb") {
                         setRaise(selectedRaiseTo + bigBlind)
                     }
                     presetButton(title: "1/2 Pot",
-                                 accessibilityID: HoldemAccessibility.Table.raisePreset("halfPot")) {
+                                 accessibilityID: "table.raise.preset.halfPot") {
                         setRaise(recommendedRaiseTo(potDivisor: 2))
                     }
                     presetButton(title: "Pot",
-                                 accessibilityID: HoldemAccessibility.Table.raisePreset("pot")) {
+                                 accessibilityID: "table.raise.preset.pot") {
                         setRaise(recommendedRaiseTo(potDivisor: 1))
                     }
                     presetButton(title: "All in",
-                                 accessibilityID: HoldemAccessibility.Table.raisePreset("allIn")) {
+                                 accessibilityID: "table.raise.preset.allIn") {
                         setRaise(raiseBounds.upperBound)
                     }
                 }
                 PrimaryActionButton(
                     title: "Raise",
                     minHeight: Theme.Metrics.compactControlHeight,
-                    accessibilityID: HoldemAccessibility.Table.submitRaise,
+                    accessibilityID: "table.raise.submit",
                     accessibilityLabel: "Raise to \(selectedRaiseText)"
                 ) {
                     onRaise(selectedRaiseTo)
@@ -206,7 +192,7 @@ private struct RaisePanelView: View {
     }
 
     private func setRaise(_ value: Int) {
-        raiseTo = Double(min(max(value, raiseBounds.lowerBound), raiseBounds.upperBound))
+        raiseTo = min(max(value, raiseBounds.lowerBound), raiseBounds.upperBound)
     }
 
     private func recommendedRaiseTo(potDivisor: Int) -> Int {
@@ -216,7 +202,7 @@ private struct RaisePanelView: View {
     }
 
     private var selectedRaiseTo: Int {
-        min(max(Int(raiseTo), raiseBounds.lowerBound), raiseBounds.upperBound)
+        min(max(raiseTo, raiseBounds.lowerBound), raiseBounds.upperBound)
     }
 
     private var selectedRaiseText: String {

@@ -1,27 +1,8 @@
 import Foundation
 
-private struct GameStateAnyCodingKey: CodingKey {
-    let stringValue: String
-    let intValue: Int? = nil
-
-    init?(stringValue: String) { self.stringValue = stringValue }
-    init?(intValue: Int) { return nil }
-}
-
 extension GameState {
     public init(from decoder: Decoder) throws {
-        let shape = try decoder.container(keyedBy: GameStateAnyCodingKey.self)
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let allowedKeys: Set<String> = [
-            "tableID", "handNumber", "players", "dealerIndex", "smallBlind", "bigBlind",
-            "board", "deck", "pot", "street", "currentToAct", "minRaise",
-            "turnStartedAt", "turnDuration", "results", "version",
-        ]
-        guard Set(shape.allKeys.map(\.stringValue)).isSubset(of: allowedKeys) else {
-            throw DecodingError.dataCorrupted(
-                .init(codingPath: container.codingPath,
-                      debugDescription: "Unknown game state fields"))
-        }
+        let container = try decoder.container(validatingKeys: CodingKeys.self)
         let tableID = try container.decodeIfPresent(String.self, forKey: .tableID)
             .map {
                 try Identity.decoded(
@@ -206,8 +187,7 @@ private extension GameState {
                 codingPath: codingPath
             )
             if contenders.count > 1 {
-                guard board.count == 5,
-                      contenders.allSatisfy({ $0.holeCards.count == 2 }) else {
+                guard board.count == 5 else {
                     throw corrupted("Showdown requires complete visible cards", codingPath: codingPath)
                 }
             }
@@ -281,12 +261,6 @@ private extension GameState {
         }
         guard board.count == street.boardCount else {
             throw corrupted("Board does not match the betting street", codingPath: codingPath)
-        }
-        guard contenders.allSatisfy({ $0.holeCards.count == 2 }) else {
-            throw corrupted("Contesting players require two hole cards", codingPath: codingPath)
-        }
-        guard deck.count >= max(0, 5 - board.count) else {
-            throw corrupted("Live hand cannot finish the board", codingPath: codingPath)
         }
         let totalBets = try checkedSum(players.map(\.bet), codingPath: codingPath)
         let totalCommitted = try checkedSum(players.map(\.committed), codingPath: codingPath)

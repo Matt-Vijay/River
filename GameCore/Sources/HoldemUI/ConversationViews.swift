@@ -17,7 +17,7 @@ public struct ConversationNewTableView: View {
       PrimaryActionButton(
         title: "Send table",
         systemImage: "paperplane.fill",
-        accessibilityID: HoldemAccessibility.Conversation.sendTable,
+        accessibilityID: "conversation.sendTable",
         action: onSend
       )
     }
@@ -47,7 +47,7 @@ public struct ConversationGameEntryView: View {
       if let onJoin {
         PrimaryActionButton(
           title: "Join next hand",
-          accessibilityID: HoldemAccessibility.Conversation.joinGame,
+          accessibilityID: "conversation.joinGame",
           action: onJoin)
       } else {
         Text("Try again when a seat opens.")
@@ -55,7 +55,7 @@ public struct ConversationGameEntryView: View {
       }
     }
     .accessibilityIdentifier(
-      onJoin == nil ? HoldemAccessibility.Conversation.tableFull : "")
+      onJoin == nil ? "conversation.tableFull" : "")
   }
 }
 
@@ -134,7 +134,7 @@ public struct CompactSummaryView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Theme.background)
     .accessibilityLabel("Open table. \(summary)")
-    .accessibilityIdentifier(HoldemAccessibility.Conversation.openTable)
+    .accessibilityIdentifier("conversation.openTable")
   }
 }
 
@@ -171,15 +171,15 @@ public struct GameOverView: View {
     ConversationPrompt(
       title: "Game over",
       message: summary,
-      messageAccessibilityID: HoldemAccessibility.Table.result
+      messageAccessibilityID: "table.result"
     ) {
       PrimaryActionButton(
         title: "New table",
-        accessibilityID: HoldemAccessibility.Table.newTable,
+        accessibilityID: "table.action.newTable",
         action: onNewTable
       )
     }
-    .accessibilityIdentifier(HoldemAccessibility.Conversation.gameOver)
+    .accessibilityIdentifier("conversation.gameOver")
   }
 }
 
@@ -218,10 +218,10 @@ public struct StaleTableView: View {
         .fixedSize(horizontal: false, vertical: true)
       PrimaryActionButton(
         title: "Back to Messages",
-        accessibilityID: HoldemAccessibility.Conversation.closeRecovery,
+        accessibilityID: "conversation.recovery.close",
         action: onClose)
     }
-    .accessibilityIdentifier(HoldemAccessibility.Conversation.recovery)
+    .accessibilityIdentifier("conversation.recovery")
   }
 
   private static func details(for context: Context) -> (title: String, guidance: String) {
@@ -238,7 +238,7 @@ public struct StaleTableView: View {
     case .unverifiedMessage:
       (
         "Older table format",
-        "This table predates verified player identity. Start a new River table to continue safely."
+        "This table predates player identity checks. Start a new River table to continue."
       )
     case .encodingFailed:
       (

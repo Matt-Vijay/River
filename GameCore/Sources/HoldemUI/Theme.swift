@@ -91,9 +91,7 @@ struct LeaveTableButton: View {
 
     let consequence: String
     var style = Style.icon
-    var accessibilityID = HoldemAccessibility.Table.leave
-    var confirmAccessibilityID = HoldemAccessibility.Table.confirmLeave
-    var cancelAccessibilityID = HoldemAccessibility.Table.cancelLeave
+    var accessibilityID = "table.leave"
     let action: () -> Void
 
     @State private var isConfirmingLeave = false
@@ -112,9 +110,9 @@ struct LeaveTableButton: View {
             isPresented: $isConfirmingLeave
         ) {
             Button("Stay", role: .cancel) {}
-                .accessibilityIdentifier(cancelAccessibilityID)
+                .accessibilityIdentifier("\(accessibilityID).cancel")
             Button("Leave table", role: .destructive, action: action)
-                .accessibilityIdentifier(confirmAccessibilityID)
+                .accessibilityIdentifier("\(accessibilityID).confirm")
         } message: {
             Text(consequence)
         }

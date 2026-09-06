@@ -66,7 +66,7 @@ struct HeroHandDock: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityIdentifier(HoldemAccessibility.Table.heroSeat)
+        .accessibilityIdentifier("table.heroSeat")
         .turnClockAccessibilityValue(
             startedAt: turnStart,
             duration: context.state.turnDuration
@@ -113,7 +113,7 @@ struct HoleCardsView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityIdentifier(HoldemAccessibility.Table.holeCards)
+        .accessibilityIdentifier("table.holeCards")
     }
 
     var accessibilityLabel: String {

@@ -1,15 +1,17 @@
 import XCTest
 
+@MainActor
 final class RiverMessagesInteractionTests: XCTestCase {
     private let messages = XCUIApplication(bundleIdentifier: "com.apple.MobileSMS")
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
+        try await super.setUp()
         continueAfterFailure = false
         messages.launch()
     }
 
     func testOpeningRiverSendsTableMessage() {
-        openFirstConversation()
+        openTestConversation()
         openRiver()
         configureProfileIfNeeded()
 
@@ -28,9 +30,7 @@ final class RiverMessagesInteractionTests: XCTestCase {
         let transcript = messages.collectionViews["TranscriptCollectionView"]
         let lobbyBubbles = transcript.links.matching(lobbyPredicate)
 
-        if !lobbyBubbles.firstMatch.waitForExistence(timeout: 3) {
-            sendStagedTableIfPresent(matching: lobbyPredicate)
-        }
+        sendStagedTableIfPresent(matching: lobbyPredicate)
         XCTAssertTrue(lobbyBubbles.firstMatch.waitForExistence(timeout: 8))
         let lobbyBubble = lobbyBubbles.allElementsBoundByIndex.last ?? lobbyBubbles.firstMatch
         lobbyBubble.tap()
@@ -78,9 +78,9 @@ final class RiverMessagesInteractionTests: XCTestCase {
                       "Selecting a table must automatically seat the local participant.")
     }
 
-    private func openFirstConversation() {
+    private func openTestConversation() {
         let rows = messages.descendants(matching: .any).matching(
-            NSPredicate(format: "label BEGINSWITH %@", "+1 (")
+            NSPredicate(format: "label BEGINSWITH %@", "+1 (888) 555-1212")
         )
         XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 3))
         rows.firstMatch.tap()

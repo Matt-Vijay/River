@@ -2,34 +2,6 @@ import Testing
 
 @testable import GameCore
 
-/// A deliberately small rules model used only to calculate action bounds. It
-/// has no knowledge of seats, streets, or `GameState`, which keeps the expected
-/// values independent from the production state machine.
-private struct BettingOracle {
-    let currentBet: Int
-    let minimumIncrement: Int
-    let playerBet: Int
-    let playerStack: Int
-    let lastActionBet: Int?
-
-    var callAmount: Int {
-        min(max(0, currentBet - playerBet), playerStack)
-    }
-
-    var raiseBounds: ClosedRange<Int>? {
-        let maximumTotal = playerBet + playerStack
-        let amountFaced = lastActionBet.map { max(0, currentBet - $0) }
-        let actionIsOpen = amountFaced.map { $0 >= minimumIncrement } ?? true
-
-        guard actionIsOpen,
-              maximumTotal > currentBet,
-              playerStack > max(0, currentBet - playerBet) else { return nil }
-
-        let fullRaiseTotal = currentBet + minimumIncrement
-        return min(fullRaiseTotal, maximumTotal)...maximumTotal
-    }
-}
-
 private func expectApplication(
     _ action: PlayerAction,
     by index: Int,
@@ -55,8 +27,8 @@ private func makeBettingState(
     )
 }
 
-@Suite("Betting legality oracle")
-struct BettingOracleTests {
+@Suite("Betting actions")
+struct BettingTests {
     @Test("all-in and full-raise bounds meet at every stack boundary")
     func allInAndFullRaiseBoundaries() {
         let boundaries: [(stack: Int, call: Int, raise: ClosedRange<Int>?)] = [
@@ -73,21 +45,18 @@ struct BettingOracleTests {
             let state = makeBettingState(
                 [boundary.stack, 100], seed: UInt64(boundary.stack))
             let actual = state.legalActions(for: 0)
-            let expected = BettingOracle(
-                currentBet: 20,
-                minimumIncrement: 20,
-                playerBet: 10,
-                playerStack: boundary.stack - 10,
-                lastActionBet: nil
-            )
-
             #expect(state.currentToAct == 0)
             #expect(actual.canFold)
-            #expect(expected.callAmount == boundary.call)
-            #expect(expected.raiseBounds == boundary.raise)
-            #expect(actual.callAmount == expected.callAmount)
-            #expect(actual.raiseBounds == expected.raiseBounds)
+            #expect(actual.callAmount == boundary.call)
+            #expect(actual.raiseBounds == boundary.raise)
         }
+
+        var saturated = makeBettingState([100, 100])
+        saturated.players[0].bet = TableRules.tableMaximum
+        saturated.players[0].stack = TableRules.tableMaximum
+        saturated.players[0].committed = TableRules.tableMaximum
+        saturated.minRaise = TableRules.tableMaximum
+        #expect(saturated.legalActions(for: 0).raiseBounds == nil)
     }
 
     @Test("call, check, fold, and raise permissions are exclusive and immutable on rejection")
@@ -142,6 +111,7 @@ struct BettingOracleTests {
         #expect(state.currentToAct == 0)
         expectApplication(.raise(to: 60), by: 0, to: &state)
         #expect(state.minRaise == 40)
+        #expect(state.players[1].lastActionBet == nil)
         #expect(state.legalActions(for: 1).callAmount == 50)
         #expect(state.legalActions(for: 1).raiseBounds == 100...1_000)
 
@@ -181,6 +151,9 @@ struct BettingOracleTests {
         let priorRaiser = state.legalActions(for: 3)
         #expect(priorRaiser.callAmount == 20)
         #expect(priorRaiser.raiseBounds == nil)
+        let beforeRejectedRaise = state
+        expectApplication(.raise(to: 1_000), by: 3, to: &state, expected: false)
+        #expect(state == beforeRejectedRaise)
         expectApplication(.call, by: 3, to: &state)
 
         let priorCaller = state.legalActions(for: 0)
@@ -207,16 +180,8 @@ struct BettingOracleTests {
             #expect(state.currentToAct == 3)
 
             let actual = state.legalActions(for: 3)
-            let oracle = BettingOracle(
-                currentBet: finalAllIn,
-                minimumIncrement: 60,
-                playerBet: 80,
-                playerStack: 920,
-                lastActionBet: 80
-            )
             #expect(actual.callAmount == finalAllIn - 80)
-            #expect(actual.raiseBounds == oracle.raiseBounds)
-            #expect((actual.raiseBounds != nil) == (finalAllIn >= 140))
+            #expect(actual.raiseBounds == (finalAllIn >= 140 ? (finalAllIn + 60)...1_000 : nil))
         }
     }
 

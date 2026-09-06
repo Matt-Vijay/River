@@ -70,7 +70,7 @@ struct LegacyPayloadTests {
     func versionedPayloadsRemainBackwardCompatible() throws {
         let lobby = Lobby(tableID: "table-123")
             .fixtureSeat(id: "a", name: "Alice", avatar: "A")
-        let wire = try decodedWire(GamePayload.encode(.lobby(lobby)))
+        let wire = try GamePayload.encoder.encode(TableMessage.lobby(lobby))
 
         guard case .lobby(let decoded) = try GamePayload.decoder.decode(
             SynthesizedTableMessage.self,
@@ -90,7 +90,7 @@ struct LegacyPayloadTests {
         )
         var object = try #require(
             JSONSerialization.jsonObject(
-                with: decodedWire(GamePayload.encode(original))
+                with: GamePayload.encoder.encode(original)
             ) as? [String: Any]
         )
         object["wireVersion"] = 1
@@ -100,9 +100,8 @@ struct LegacyPayloadTests {
         ).base64URLEncodedString()
 
         let decoded = try GamePayload.decodeMessage(from: versionOne)
-        let migrated = try GamePayload.encode(decoded)
         let migratedObject = try #require(
-            JSONSerialization.jsonObject(with: decodedWire(migrated)) as? [String: Any]
+            JSONSerialization.jsonObject(with: GamePayload.encoder.encode(decoded)) as? [String: Any]
         )
 
         #expect(decoded == original)
@@ -193,22 +192,12 @@ struct LegacyPayloadTests {
     }
 
     private func legacyEncodedMessage(_ message: TableMessage, removing keys: Set<String>) throws -> String {
-        let encoded = try GamePayload.encode(message)
-        let data = try decodedWire(encoded)
+        let data = try GamePayload.encoder.encode(message)
         let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let legacyObject = removingKeys(
             keys.union(["wireVersion", "integrity"]), from: object)
         let legacyData = try JSONSerialization.data(withJSONObject: legacyObject, options: [.sortedKeys])
         return legacyData.base64URLEncodedString()
-    }
-
-    private func decodedWire(_ encoded: String) throws -> Data {
-        let isCompressed = encoded.first == "z"
-        let payload = isCompressed ? String(encoded.dropFirst()) : encoded
-        let data = try #require(Data(base64URLEncoded: payload))
-        return try isCompressed
-            ? (data as NSData).decompressed(using: .lzfse) as Data
-            : data
     }
 
     private func removingKeys(_ keys: Set<String>, from object: Any) -> Any {

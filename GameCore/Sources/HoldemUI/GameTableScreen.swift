@@ -144,22 +144,17 @@ public struct GameTableScreen: View {
                 startedAt: context.state.turnStartedAt ?? date,
                 duration: context.state.turnDuration
             )
-            .accessibilityIdentifier(HoldemAccessibility.Table.handoff)
+            .accessibilityIdentifier("table.handoff")
 
-            if context.state.isTurnExpired(at: date) {
-                PrimaryActionButton(
-                    title: "Resolve turn",
-                    systemImage: "clock.badge.exclamationmark",
-                    accessibilityID: HoldemAccessibility.Table.resolveTimeout,
-                    action: { apply(.resolveTimeout, actorID: context.hero.id) }
-                )
-            } else {
-                PrimaryActionButton(
-                    title: "View hand",
-                    systemImage: "eye.fill",
-                    accessibilityID: HoldemAccessibility.Table.revealHand,
-                    action: { reveal(context) }
-                )
+            let expired = context.state.isTurnExpired(at: date)
+            PrimaryActionButton(
+                title: expired ? "Resolve turn" : "View hand",
+                systemImage: expired ? "clock.badge.exclamationmark" : "eye.fill",
+                accessibilityID: expired
+                    ? "table.timeout.resolve" : "table.handoff.reveal"
+            ) {
+                if expired { apply(.resolveTimeout, actorID: context.hero.id) }
+                else { reveal(context) }
             }
         }
         .padding(.horizontal, 32)

@@ -202,8 +202,8 @@ public extension TableMutationReceipt {
         }
     }
 
-    /// `authenticatedActor` must be derived locally (for example, from
-    /// `MSMessage.senderParticipantIdentifier`), never trusted from the receipt.
+    /// Replay verifies the transition, not identity. Before accepting its result,
+    /// the caller must independently bind this actor to the locally observed sender.
     func replay(
         predecessor: TableMessage,
         authenticatedActor: TableActor

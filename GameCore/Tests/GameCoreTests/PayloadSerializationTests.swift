@@ -253,17 +253,18 @@ struct PayloadSerializationTests {
 
     @Test("decoded completed games reject live betting state")
     func decodedCompletedGamesRejectLiveBettingState() throws {
-        var state = completedSixPlayerState()
-        state.dealerIndex = -5
-        state.street = .turn
-        state.currentToAct = 0
-        state.turnStartedAt = Date()
-        state.players[0].bet = 10
-        state.players[0].lastActionBet = 10
-
-        let encoded = try encodedGame(state)
-        #expect(throws: DecodingError.self) {
-            _ = try decodedGame(from: encoded)
+        let completed = completedSixPlayerState()
+        let mutations: [(inout GameState) -> Void] = [
+            { $0.street = .turn },
+            { $0.currentToAct = 0 },
+            { $0.turnStartedAt = Date(timeIntervalSince1970: 1_700_000_000) },
+            { $0.players[0].bet = 10 },
+            { $0.players[0].lastActionBet = 10 },
+        ]
+        for mutate in mutations {
+            var state = completed
+            mutate(&state)
+            expectInvalidPayload(try encodedGame(state))
         }
     }
 

@@ -39,11 +39,14 @@ extension View {
 }
 
 struct CountdownTimer: View {
+    @Environment(\.tableNow) private var now
+
     let startedAt: Date
     let duration: TimeInterval
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0,
+                                paused: (now ?? .now).timeIntervalSince(startedAt) >= duration)) { timeline in
             let remaining = TurnClock.remainingFraction(
                 startedAt: startedAt, duration: duration, at: timeline.date
             )
@@ -75,16 +78,20 @@ private struct PieShape: Shape {
 }
 
 struct DepletingBorder: View {
+    @Environment(\.tableNow) private var now
+
     let startedAt: Date
     let duration: TimeInterval
     let cornerRadius: CGFloat
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0,
+                                paused: (now ?? .now).timeIntervalSince(startedAt) >= duration)) { timeline in
             let remaining = TurnClock.remainingFraction(
                 startedAt: startedAt, duration: duration, at: timeline.date
             )
             RoundedRectangle(cornerRadius: cornerRadius)
+                .inset(by: 1.25)
                 .trim(from: 0, to: remaining)
                 .stroke(remaining < 0.25 ? Theme.warn : Theme.accent,
                         style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
