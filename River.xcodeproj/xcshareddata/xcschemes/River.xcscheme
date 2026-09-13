@@ -44,9 +44,9 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "10AF8A55EB905652D7EE2853"
-               BuildableName = "RiverUITests.xctest"
-               BlueprintName = "RiverUITests"
+               BlueprintIdentifier = "7911A0BEA50B66F22399A53D"
+               BuildableName = "RiverTests.xctest"
+               BlueprintName = "RiverTests"
                ReferencedContainer = "container:River.xcodeproj">
             </BuildableReference>
          </TestableReference>
