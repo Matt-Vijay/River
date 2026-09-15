@@ -12,6 +12,7 @@ struct TableControls: View {
     @ScaledMetric(relativeTo: .subheadline) private var amountHeight: CGFloat = 18
     @ScaledMetric(relativeTo: .subheadline) private var statusHeight: CGFloat = 40
     private var betContentHeight: CGFloat { titleHeight + amountHeight + 2 }
+    private var wideAmounts: Bool { table.rules.buyIn * table.rules.capacity >= 1_000_000 }
     private var actionHeight: CGFloat {
         (betContentHeight + 24) * (textSize.isAccessibilitySize ? 3 : 1)
             + (textSize.isAccessibilitySize ? 20 : 0)
@@ -19,7 +20,9 @@ struct TableControls: View {
     private var controlsHeight: CGFloat {
         let normalHeight = statusHeight + 12 + actionHeight
         // Reserve the same space in both modes, including all six accessibility rows.
-        let composerHeight = textSize.isAccessibilitySize ? max(52, titleHeight + 24) * 6 + 50 : 116
+        let rowHeight = max(52, titleHeight + 24)
+        let composerHeight = textSize.isAccessibilitySize ? rowHeight * 6 + 50
+            : wideAmounts ? rowHeight * 3 + 22 : rowHeight * 2 + 12
         return max(normalHeight, composerHeight)
     }
 
@@ -51,7 +54,7 @@ struct TableControls: View {
         Group {
             if let selection = raising, legal != nil, reveal == nil {
                 RaiseComposer(bounds: selection.bounds, call: selection.call, bet: table.currentBet,
-                              pot: table.hand?.pot ?? 0, submit: {
+                              pot: table.hand?.pot ?? 0, wideAmounts: wideAmounts, submit: {
                     session.act(.bet(.raiseTo($0)), on: table)
                     raising = nil
                 }, cancel: { raising = nil })
@@ -162,6 +165,7 @@ private struct RaiseComposer: View {
     let call: Int
     let bet: Int
     let pot: Int
+    let wideAmounts: Bool
     let submit: (Int) -> Void
     let cancel: () -> Void
     @State private var amount: Int
@@ -170,13 +174,15 @@ private struct RaiseComposer: View {
     @Environment(\.dynamicTypeSize) private var textSize
     private var actionTitle: String { bet == 0 ? "Bet" : "Raise to" }
     private var amountDescription: String { "\(actionTitle) \(Chips.text(amount)) chips" }
+    private var stacksAmount: Bool { textSize.isAccessibilitySize || wideAmounts }
 
-    init(bounds: ClosedRange<Int>, call: Int, bet: Int, pot: Int,
+    init(bounds: ClosedRange<Int>, call: Int, bet: Int, pot: Int, wideAmounts: Bool,
          submit: @escaping (Int) -> Void, cancel: @escaping () -> Void) {
         self.bounds = bounds
         self.call = call
         self.bet = bet
         self.pot = pot
+        self.wideAmounts = wideAmounts
         self.submit = submit
         self.cancel = cancel
         _amount = State(initialValue: bounds.lowerBound)
@@ -204,12 +210,12 @@ private struct RaiseComposer: View {
     }
 
     private var amountControl: some View {
-        let layout = textSize.isAccessibilitySize
+        let layout = stacksAmount
             ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 12))
         return layout {
                 Text(Chips.text(amount)).font(.headline).monospacedDigit()
                     .lineLimit(1).minimumScaleFactor(0.5)
-                    .frame(width: textSize.isAccessibilitySize ? nil : amountWidth)
+                    .frame(width: stacksAmount ? nil : amountWidth)
                     .frame(minHeight: 52)
                     .accessibilityLabel(amountDescription)
                     .accessibilityIdentifier("raise.amount")
