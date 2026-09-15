@@ -96,7 +96,7 @@ struct TableControls: View {
                     ActionButton(title: "Deal next hand", id: "table.deal", isEnabled: table.canDeal) { deal() }
                 }
             } else if table.hand?.remaining(at: now) == 0 {
-                ActionButton(title: reveal != nil ? (table.stake(session.viewerID)?.bet == table.currentBet ? "Check" : "Fold hand") : table.timeoutTitle,
+                ActionButton(title: table.timeoutTitle(for: session.viewerID),
                              id: "table.timeout.resolve", prominent: false) {
                     session.act(.timeout, on: table)
                 }
@@ -156,8 +156,9 @@ struct TableControls: View {
 extension Poker.Table {
     var usesWideChipLayout: Bool { rules.buyIn * rules.capacity >= 1_000_000 }
 
-    var timeoutTitle: String {
+    func timeoutTitle(for viewer: String) -> String {
         guard let turn = hand?.turn, let player = seat(turn), let stake = stake(turn) else { return "Resolve turn" }
+        if turn == viewer { return stake.bet == currentBet ? "Check" : "Fold hand" }
         return stake.bet == currentBet ? "Check for \(player.profile.name)" : "Fold \(player.profile.name)'s hand"
     }
 }
