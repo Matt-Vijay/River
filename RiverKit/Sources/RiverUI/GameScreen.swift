@@ -315,6 +315,9 @@ private struct OpponentSeats: View {
             else if stake?.lastAction == .call { "Call" }
             else if let stake, stake.bet > 0 { "Bet \(Chips.text(stake.bet))" }
             else { stake?.lastAction?.name ?? " " }
+        let spokenStatus = if award == nil { status }
+            else if let hand = award?.hand { "\(status) chips, \(hand.name)" }
+            else { "\(status) chips" }
         let showingCards = isVisible && table.hand?.isComplete == true && stake?.folded == false && (table.hand?.contenders.count ?? 0) > 1
         let identity = compact
             ? AnyLayout(HStackLayout(spacing: 8)) : AnyLayout(VStackLayout(spacing: 6))
@@ -350,7 +353,7 @@ private struct OpponentSeats: View {
                     .lineLimit(1).minimumScaleFactor(0.5)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(height: lineHeight)
-                    .accessibilityLabel(award == nil ? status : "\(status) chips")
+                    .accessibilityLabel(spokenStatus)
             }
             .font(.subheadline)
         }
