@@ -12,6 +12,16 @@ struct TableControls: View {
     @ScaledMetric(relativeTo: .subheadline) private var amountHeight: CGFloat = 18
     @ScaledMetric(relativeTo: .subheadline) private var statusHeight: CGFloat = 40
     private var betContentHeight: CGFloat { titleHeight + amountHeight + 2 }
+    private var actionHeight: CGFloat {
+        (betContentHeight + 24) * (textSize.isAccessibilitySize ? 3 : 1)
+            + (textSize.isAccessibilitySize ? 20 : 0)
+    }
+    private var controlsHeight: CGFloat {
+        let normalHeight = statusHeight + 12 + actionHeight
+        // Reserve the same space in both modes, including all six accessibility rows.
+        let composerHeight = textSize.isAccessibilitySize ? max(52, titleHeight + 24) * 6 + 50 : 116
+        return max(normalHeight, composerHeight)
+    }
 
     private var legal: LegalBet? { table.legalBet(for: session.viewerID, at: now) }
     private var needsReentry: Bool {
@@ -38,20 +48,32 @@ struct TableControls: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text(statusTitle)
-                .font(.subheadline).foregroundStyle(.white.opacity(0.7))
-                .multilineTextAlignment(.center)
-                .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true).truncationMode(.middle)
-                .frame(maxWidth: .infinity, minHeight: statusHeight)
-                .accessibilityLabel(reveal != nil ? "\(statusTitle). Hand hidden." : table.hand?.isComplete == true && !needsReentry ? table.summary : statusTitle)
-                .accessibilityHidden(legal != nil && reveal == nil)
-                .accessibilityIdentifier(reveal != nil ? "table.handoff" : table.hand?.isComplete == true ? "table.result" : "table.waiting")
-            actions
-                .lineLimit(2).truncationMode(.middle)
-                .frame(height: (betContentHeight + 24) * (textSize.isAccessibilitySize ? 3 : 1)
-                       + (textSize.isAccessibilitySize ? 20 : 0), alignment: .top)
+        Group {
+            if let selection = raising, legal != nil, reveal == nil {
+                RaiseComposer(bounds: selection.bounds, call: selection.call, bet: table.currentBet,
+                              pot: table.hand?.pot ?? 0, submit: {
+                    session.act(.bet(.raiseTo($0)), on: table)
+                    raising = nil
+                }, cancel: { raising = nil })
+                .id(selection.id)
+            } else {
+                VStack(spacing: 12) {
+                    Text(statusTitle)
+                        .font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true).truncationMode(.middle)
+                        .frame(maxWidth: .infinity, minHeight: statusHeight)
+                        .accessibilityLabel(reveal != nil ? "\(statusTitle). Hand hidden." : table.hand?.isComplete == true && !needsReentry ? table.summary : statusTitle)
+                        .accessibilityHidden(legal != nil && reveal == nil)
+                        .accessibilityIdentifier(reveal != nil ? "table.handoff" : table.hand?.isComplete == true ? "table.result" : "table.waiting")
+                    actions
+                        .lineLimit(2).truncationMode(.middle)
+                        .frame(height: actionHeight, alignment: .top)
+                }
+            }
         }
+        .frame(minHeight: controlsHeight)
+        .fixedSize(horizontal: false, vertical: true)
         .foregroundStyle(.primary)
         .onChange(of: legal) { raising = nil }
     }
@@ -135,95 +157,115 @@ struct RaiseSelection: Identifiable {
     let call: Int
 }
 
-struct RaiseSheet: View {
+private struct RaiseComposer: View {
     let bounds: ClosedRange<Int>
     let call: Int
     let bet: Int
     let pot: Int
     let submit: (Int) -> Void
+    let cancel: () -> Void
     @State private var amount: Int
     @State private var presetFeedback = false
-    @ScaledMetric(relativeTo: .largeTitle) private var amountHeight: CGFloat = 44
-    @Environment(\.dismiss) private var dismiss
+    @ScaledMetric(relativeTo: .headline) private var amountWidth: CGFloat = 72
     @Environment(\.dynamicTypeSize) private var textSize
     private var actionTitle: String { bet == 0 ? "Bet" : "Raise to" }
     private var amountDescription: String { "\(actionTitle) \(Chips.text(amount)) chips" }
 
-    init(bounds: ClosedRange<Int>, call: Int, bet: Int, pot: Int, submit: @escaping (Int) -> Void) {
+    init(bounds: ClosedRange<Int>, call: Int, bet: Int, pot: Int,
+         submit: @escaping (Int) -> Void, cancel: @escaping () -> Void) {
         self.bounds = bounds
         self.call = call
         self.bet = bet
         self.pot = pot
         self.submit = submit
+        self.cancel = cancel
         _amount = State(initialValue: bounds.lowerBound)
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    Text(Chips.text(amount)).font(.largeTitle.weight(.semibold)).monospacedDigit()
-                        .lineLimit(1).minimumScaleFactor(0.5)
-                        .frame(height: amountHeight)
-                        .accessibilityLabel(amountDescription)
-                        .accessibilityIdentifier("raise.amount")
-                    if bounds.lowerBound < bounds.upperBound {
-                        Slider(value: Binding(get: { Double(amount) }, set: { amount = Int($0) }),
-                               in: Double(bounds.lowerBound)...Double(bounds.upperBound), step: 1)
-                            .tint(.white).accessibilityLabel(actionTitle).accessibilityValue("\(Chips.text(amount)) chips")
-                            .accessibilityIdentifier("raise.slider")
-                        let presets = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
-                        presets {
-                            let half = min(max(bet + (pot + call) / 2, bounds.lowerBound), bounds.upperBound)
-                            let full = min(max(bet + pot + call, bounds.lowerBound), bounds.upperBound)
-                            if half != full { preset("Half pot", value: half, id: "raise.half") }
-                            if full != bounds.upperBound { preset("Pot", value: full, id: "raise.pot") }
-                            preset("All in", value: bounds.upperBound, id: "raise.allIn")
-                        }
-                    }
-                    Button {
-                        submit(amount)
-                        dismiss()
-                    } label: {
-                        let label = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 2)) : AnyLayout(HStackLayout(spacing: 4))
-                        label {
-                            Text(actionTitle)
-                            Text(Chips.text(amount)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
-                        }
-                    }
-                    .buttonStyle(RiverButtonStyle(prominent: true))
-                    .accessibilityLabel(amountDescription)
-                    .accessibilityIdentifier("raise.submit")
+        Group {
+            if textSize.isAccessibilitySize {
+                VStack(spacing: 10) {
+                    presets
+                    amountControl
+                    cancelButton
                 }
-                .padding(24)
-                .foregroundStyle(.primary)
-            }
-            .background(Color.black)
-            .navigationTitle(actionTitle)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.black, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
-                        .labelStyle(.iconOnly).accessibilityIdentifier("raise.cancel")
+            } else {
+                VStack(spacing: 12) {
+                    amountControl
+                    HStack(spacing: 8) {
+                        presets
+                        cancelButton
+                    }
                 }
             }
         }
-        .presentationDetents(textSize.isAccessibilitySize ? [.large] : [.height(360), .large])
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Color.black)
         .sensoryFeedback(.selection, trigger: presetFeedback)
     }
 
+    private var amountControl: some View {
+        let layout = textSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 12))
+        return layout {
+                Text(Chips.text(amount)).font(.headline).monospacedDigit()
+                    .lineLimit(1).minimumScaleFactor(0.5)
+                    .frame(width: textSize.isAccessibilitySize ? nil : amountWidth)
+                    .frame(minHeight: 52)
+                    .accessibilityLabel(amountDescription)
+                    .accessibilityIdentifier("raise.amount")
+                HStack(spacing: 12) {
+                    if bounds.lowerBound < bounds.upperBound {
+                        Slider(value: Binding(get: { Double(amount) }, set: {
+                            amount = min(max(Int($0), bounds.lowerBound), bounds.upperBound)
+                        }), in: Double(bounds.lowerBound)...Double(bounds.upperBound), step: 1)
+                        .frame(minWidth: 44, minHeight: 52)
+                        .tint(.white).accessibilityLabel(actionTitle)
+                        .accessibilityValue("\(Chips.text(amount)) chips")
+                        .accessibilityIdentifier("raise.slider")
+                    } else {
+                        Spacer(minLength: 0)
+                    }
+                    Button { submit(amount) } label: {
+                        Image(systemName: "arrow.up").frame(width: 28)
+                    }
+                    .buttonStyle(RiverButtonStyle(prominent: true))
+                    .fixedSize(horizontal: true, vertical: false)
+                    .accessibilityLabel(amountDescription)
+                    .accessibilityIdentifier("raise.submit")
+                }
+        }
+    }
+
+    @ViewBuilder private var presets: some View {
+        if bounds.lowerBound < bounds.upperBound {
+            let half = min(max(bet + (pot + call) / 2, bounds.lowerBound), bounds.upperBound)
+            let full = min(max(bet + pot + call, bounds.lowerBound), bounds.upperBound)
+            if half != full { preset("1/2 pot", value: half, id: "raise.half") }
+            if full != bounds.upperBound { preset("Pot", value: full, id: "raise.pot") }
+            preset("All in", value: bounds.upperBound, id: "raise.allIn")
+        } else {
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var cancelButton: some View {
+        Button(action: cancel) { Image(systemName: "xmark").frame(width: 28) }
+            .buttonStyle(RiverButtonStyle())
+            .fixedSize(horizontal: true, vertical: false)
+            .accessibilityLabel("Cancel bet")
+            .accessibilityIdentifier("raise.cancel")
+    }
+
     private func preset(_ title: String, value: Int, id: String) -> some View {
-        ActionButton(title: title, id: id, prominent: false) {
+        Button(title) {
             if amount != value {
                 amount = value
                 presetFeedback.toggle()
             }
         }
+        .lineLimit(1).minimumScaleFactor(0.75)
+        .buttonStyle(RiverButtonStyle())
+        .accessibilityIdentifier(id)
+        .accessibilityValue("\(Chips.text(value)) chips")
     }
 }

@@ -88,7 +88,6 @@ struct Avatar: View {
     var body: some View {
         Text(text).font(.system(size: size * 0.6))
             .frame(width: size, height: size)
-            .background(.white.opacity(0.12), in: Circle())
             .accessibilityHidden(true)
     }
 }
@@ -102,8 +101,19 @@ struct PlayingCard: View {
             let small = geometry.size.width < 45
             let large = geometry.size.width > 68
             ZStack {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(card == nil ? Color.white.opacity(0.08) : highlighted ? RiverStyle.ink : .white)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(highlighted ? RiverStyle.ink : .white)
+                if card == nil {
+                    Canvas { context, size in
+                        var lines = Path()
+                        for x in stride(from: -size.height, through: size.width, by: 7) {
+                            lines.move(to: CGPoint(x: x, y: size.height))
+                            lines.addLine(to: CGPoint(x: x + size.height, y: 0))
+                        }
+                        context.stroke(lines, with: .color(.black.opacity(0.3)), lineWidth: 1)
+                    }
+                    .padding(5).clipShape(RoundedRectangle(cornerRadius: 8))
+                }
                 if let card {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(card.label).font(.system(size: small ? 15 : large ? 32 : 24, weight: .semibold, design: .rounded))
@@ -117,8 +127,8 @@ struct PlayingCard: View {
                     .padding(small ? 4 : 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(.white.opacity(highlighted ? 1 : 0.2), lineWidth: highlighted ? 2 : 1)
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(highlighted ? Color.white : .black.opacity(0.14), lineWidth: highlighted ? 2 : 1)
             }
         }
         .aspectRatio(0.7, contentMode: .fit)

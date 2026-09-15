@@ -43,12 +43,6 @@ struct GameScreen: View {
         }
         .foregroundStyle(.white)
         .background(Color.black)
-        .sheet(item: $raising) { selection in
-            RaiseSheet(bounds: selection.bounds, call: selection.call, bet: table.currentBet,
-                       pot: table.hand?.pot ?? 0) {
-                session.act(.bet(.raiseTo($0)), on: table)
-            }
-        }
         .onChange(of: isPresented) {
             if !isPresented {
                 revealedTurn = nil
@@ -119,7 +113,8 @@ struct GameScreen: View {
                     .padding(20)
                 } else {
                     VStack(spacing: 0) {
-                        OpponentSeats(table: table, seats: opponents, now: now, isVisible: isPresented)
+                        OpponentSeats(table: table, seats: opponents, now: now, isVisible: isPresented,
+                                      singleRow: geometry.size.width >= 380 && textSize <= .xLarge)
                         Spacer(minLength: 16)
                         Board(table: table)
                         Spacer(minLength: 16)
@@ -207,49 +202,48 @@ private struct HeroSeat: View {
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
             : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
         layout {
-            HStack(spacing: 8) {
+            HStack(spacing: textSize.isAccessibilitySize ? 8 : -16) {
                 ForEach(0..<2, id: \.self) { index in
                     let card = cards.indices.contains(index) ? cards[index] : nil
                     PlayingCard(card: card, highlighted: card.map { award?.hand?.cards.contains($0) == true } ?? false)
                 }
             }
-            .frame(width: textSize.isAccessibilitySize ? min(80, scaledCardWidth) * 2 + 8 : 128,
-                   height: textSize.isAccessibilitySize ? min(80, scaledCardWidth) / 0.7 : 86)
+            .frame(width: textSize.isAccessibilitySize ? min(80, scaledCardWidth) * 2 + 8 : 152,
+                   height: textSize.isAccessibilitySize ? min(80, scaledCardWidth) / 0.7 : 120)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(cards.isEmpty ? "" : "table.holeCards")
             .accessibilityLabel("Cards for \(table.seat(viewer)?.profile.name ?? "player")")
             .accessibilityHidden(cards.isEmpty)
             if let profile = table.seat(viewer)?.profile ?? profile {
-                HStack(alignment: .top, spacing: 10) {
-                    TurnAvatar(text: profile.avatar, hand: table.hand, duration: table.rules.turnSeconds,
-                               active: isVisible && table.hand?.turn == viewer, size: 36, now: now, dealer: table.hand?.dealerID == viewer)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(profile.name).fontWeight(.semibold)
-                            .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true)
-                            .frame(height: lineHeight * (textSize.isAccessibilitySize ? 2 : 1), alignment: .leading)
-                            .accessibilityIdentifier("table.hero.name")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(profile.name).fontWeight(.medium)
+                        .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true)
+                        .frame(height: lineHeight * (textSize.isAccessibilitySize ? 2 : 1))
+                        .accessibilityIdentifier("table.hero.name")
+                    HStack(spacing: 8) {
+                        TurnAvatar(text: profile.avatar, hand: table.hand, duration: table.rules.turnSeconds,
+                                   active: isVisible && table.hand?.turn == viewer, size: 32, now: now, dealer: table.hand?.dealerID == viewer)
                         Text(table.seat(viewer).map { Chips.text($0.chips) } ?? " ").monospacedDigit()
+                            .font(.headline)
                             .lineLimit(1).minimumScaleFactor(0.5)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(height: lineHeight, alignment: .leading)
                             .accessibilityLabel(table.seat(viewer).map { "\(Chips.text($0.chips)) chips" } ?? "")
                             .accessibilityHidden(table.seat(viewer) == nil)
                             .accessibilityIdentifier("table.hero.stack")
-                        Text(handDescription).foregroundStyle(.secondary)
-                            .lineLimit(1).minimumScaleFactor(0.8)
-                            .frame(height: lineHeight, alignment: .leading)
-                            .accessibilityIdentifier("table.hero.hand")
-                        Text(wager ?? " ").monospacedDigit().foregroundStyle(.secondary)
-                            .lineLimit(1).minimumScaleFactor(0.5)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(height: lineHeight, alignment: .leading)
-                            .accessibilityLabel(wager.map { "\($0) chips" } ?? "")
-                            .accessibilityHidden(wager == nil)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: max(32, lineHeight))
+                    Text(handDescription).foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                        .frame(height: lineHeight)
+                        .accessibilityIdentifier("table.hero.hand")
+                    Text(wager ?? " ").monospacedDigit().foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                        .frame(height: lineHeight)
+                        .accessibilityLabel(wager.map { "\($0) chips" } ?? "")
+                        .accessibilityHidden(wager == nil)
                 }
                 .font(.subheadline).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -275,6 +269,7 @@ private struct OpponentSeats: View {
     let now: Date
     let isVisible: Bool
     var compact = false
+    var singleRow = false
     @Environment(\.dynamicTypeSize) private var textSize
     @ScaledMetric(relativeTo: .body) private var scaledCardWidth: CGFloat = 60
     @ScaledMetric(relativeTo: .subheadline) private var lineHeight: CGFloat = 18
@@ -290,7 +285,7 @@ private struct OpponentSeats: View {
         // Settlement ranks every hand; evaluate it once for the whole grid.
         let awards = table.awards
         let wideAmounts = table.rules.buyIn * table.rules.capacity >= 100_000_000
-        let columns = textSize.isAccessibilitySize ? 1 : compact && !wideAmounts ? 5 : 3
+        let columns = textSize.isAccessibilitySize ? 1 : (compact || singleRow) && !wideAmounts ? 5 : 3
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8, alignment: .top), count: max(1, columns)),
                   alignment: .center, spacing: 20) {
             let count = textSize.isAccessibilitySize ? (seats.lastIndex { $0 != nil }.map { $0 + 1 } ?? 0) : seats.count
