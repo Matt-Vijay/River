@@ -218,6 +218,7 @@ private struct HeroSeat: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(profile.name).fontWeight(.medium)
                         .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true)
+                        .truncationMode(.middle)
                         .frame(height: lineHeight * (textSize.isAccessibilitySize ? 2 : 1))
                         .accessibilityIdentifier("table.hero.name")
                     HStack(spacing: 8) {
@@ -277,14 +278,14 @@ private struct OpponentSeats: View {
         textSize.isAccessibilitySize ? min(80, scaledCardWidth) * 2 + 3 : 64
     }
     private var seatHeight: CGFloat {
-        let details = lineHeight * (textSize.isAccessibilitySize ? 4 : 3) + 8
+        let details = lineHeight * (textSize.isAccessibilitySize ? 5 : 4) + 8
         return compact ? max(portraitWidth / 1.45, details) : portraitWidth / 1.45 + 6 + details
     }
 
     var body: some View {
         // Settlement ranks every hand; evaluate it once for the whole grid.
         let awards = table.awards
-        let wideAmounts = table.rules.buyIn * table.rules.capacity >= 100_000_000
+        let wideAmounts = table.rules.buyIn * table.rules.capacity >= 1_000_000
         let columns = textSize.isAccessibilitySize ? 1 : (compact || singleRow) && !wideAmounts ? 5 : 3
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8, alignment: .top), count: max(1, columns)),
                   alignment: .center, spacing: 20) {
@@ -337,6 +338,7 @@ private struct OpponentSeats: View {
             VStack(alignment: compact ? .leading : .center, spacing: 4) {
                 Text(seat.profile.name).fontWeight(.medium)
                     .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true)
+                    .truncationMode(.middle)
                     .frame(height: lineHeight * (textSize.isAccessibilitySize ? 2 : 1))
                 Text(Chips.text(seat.chips))
                     .monospacedDigit().foregroundStyle(.white.opacity(0.7))
@@ -345,9 +347,10 @@ private struct OpponentSeats: View {
                     .frame(height: lineHeight)
                 Text(status)
                     .monospacedDigit().foregroundStyle(.white.opacity(award == nil ? 0.65 : 1))
-                    .lineLimit(1).minimumScaleFactor(0.5)
+                    .lineLimit(2, reservesSpace: true).minimumScaleFactor(0.8)
+                    .multilineTextAlignment(compact ? .leading : .center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(height: lineHeight)
+                    .frame(height: lineHeight * 2)
                     .accessibilityLabel(spokenStatus)
             }
             .font(.subheadline)

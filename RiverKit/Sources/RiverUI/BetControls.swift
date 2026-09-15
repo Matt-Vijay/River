@@ -213,8 +213,9 @@ private struct RaiseComposer: View {
         let layout = stacksAmount
             ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 12))
         return layout {
-                Text(Chips.text(amount)).font(.headline).monospacedDigit()
-                    .lineLimit(1).minimumScaleFactor(0.5)
+                Text("\(actionTitle)\(stacksAmount ? " " : "\n")\(Chips.text(amount))")
+                    .font(.headline).monospacedDigit().multilineTextAlignment(.center)
+                    .lineLimit(stacksAmount ? 1 : 2).minimumScaleFactor(0.5)
                     .frame(width: stacksAmount ? nil : amountWidth)
                     .frame(minHeight: 52)
                     .accessibilityLabel(amountDescription)
