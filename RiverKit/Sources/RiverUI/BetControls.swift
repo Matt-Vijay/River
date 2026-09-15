@@ -22,7 +22,7 @@ struct TableControls: View {
         // Reserve the same space in both modes, including all six accessibility rows.
         let rowHeight = max(52, titleHeight + 24)
         let composerHeight = textSize.isAccessibilitySize ? rowHeight * 6 + 50
-            : wideAmounts ? rowHeight * 3 + 22 : rowHeight * 2 + 12
+            : wideAmounts || textSize >= .xxLarge ? rowHeight * 3 + 22 : rowHeight * 2 + 12
         return max(normalHeight, composerHeight)
     }
 
@@ -186,7 +186,7 @@ private struct RaiseComposer: View {
     @Environment(\.dynamicTypeSize) private var textSize
     private var actionTitle: String { bet == 0 ? "Bet" : "Raise to" }
     private var amountDescription: String { "\(actionTitle) \(Chips.text(amount)) chips" }
-    private var stacksAmount: Bool { textSize.isAccessibilitySize || wideAmounts }
+    private var stacksAmount: Bool { textSize >= .xxLarge || wideAmounts }
 
     var body: some View {
         Group {
@@ -198,11 +198,8 @@ private struct RaiseComposer: View {
                 }
             } else {
                 VStack(spacing: 12) {
+                    HStack(spacing: 8) { presets }
                     amountControl
-                    HStack(spacing: 8) {
-                        presets
-                        cancelButton
-                    }
                 }
             }
         }
@@ -232,6 +229,7 @@ private struct RaiseComposer: View {
                     } else {
                         Spacer(minLength: 0)
                     }
+                    if !textSize.isAccessibilitySize { cancelButton }
                     Button { submit(amount) } label: {
                         Image(systemName: "arrow.up").frame(width: 28)
                     }

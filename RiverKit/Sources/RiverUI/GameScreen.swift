@@ -82,8 +82,8 @@ struct GameScreen: View {
         .avoidingWindowControls()
     }
 
-    private func playerDock(at now: Date, compact: Bool = false) -> some View {
-        VStack(spacing: compact ? 12 : 16) {
+    private func playerDock(at now: Date) -> some View {
+        VStack(spacing: 16) {
             TableControls(session: session, table: table, now: now, raising: $raising,
                           reveal: privateHandHidden ? { revealedTurn = turnKey } : nil)
             HeroSeat(table: table, viewer: session.viewerID, profile: session.profile,
@@ -95,12 +95,14 @@ struct GameScreen: View {
         GeometryReader { geometry in
             ScrollView {
                 if geometry.size.width >= 650 && geometry.size.width > geometry.size.height && !textSize.isAccessibilitySize {
-                    VStack(spacing: 12) {
-                        OpponentSeats(table: table, seats: opponents, now: now, isVisible: isPresented, compact: true)
-                        HStack(alignment: .center, spacing: 24) {
-                            Board(table: table).frame(maxWidth: .infinity)
-                            playerDock(at: now, compact: true).frame(width: 300)
+                    HStack(alignment: .center, spacing: 24) {
+                        VStack(spacing: 16) {
+                            OpponentSeats(table: table, seats: opponents, now: now, isVisible: isPresented,
+                                          singleRow: textSize <= .xLarge)
+                            Board(table: table)
                         }
+                        .frame(maxWidth: .infinity)
+                        playerDock(at: now).frame(width: 300)
                     }
                     .padding(.horizontal, 20).padding(.vertical, 8)
                     .frame(minHeight: geometry.size.height)
@@ -269,7 +271,6 @@ private struct OpponentSeats: View {
     let seats: [Seat?]
     let now: Date
     let isVisible: Bool
-    var compact = false
     var singleRow = false
     @Environment(\.dynamicTypeSize) private var textSize
     @ScaledMetric(relativeTo: .body) private var scaledCardWidth: CGFloat = 60
@@ -279,14 +280,14 @@ private struct OpponentSeats: View {
     }
     private var seatHeight: CGFloat {
         let details = lineHeight * (textSize.isAccessibilitySize ? 5 : 4) + 8
-        return compact ? max(portraitWidth / 1.45, details) : portraitWidth / 1.45 + 6 + details
+        return portraitWidth / 1.45 + 6 + details
     }
 
     var body: some View {
         // Settlement ranks every hand; evaluate it once for the whole grid.
         let awards = table.awards
         let wideAmounts = table.rules.buyIn * table.rules.capacity >= 1_000_000
-        let columns = textSize.isAccessibilitySize ? 1 : (compact || singleRow) && !wideAmounts ? 5 : 3
+        let columns = textSize.isAccessibilitySize ? 1 : singleRow && !wideAmounts ? 5 : 3
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8, alignment: .top), count: max(1, columns)),
                   alignment: .center, spacing: 20) {
             let count = textSize.isAccessibilitySize ? (seats.lastIndex { $0 != nil }.map { $0 + 1 } ?? 0) : seats.count
@@ -315,9 +316,7 @@ private struct OpponentSeats: View {
             else if let hand = award?.hand { "\(status) chips, \(hand.name)" }
             else { "\(status) chips" }
         let showingCards = isVisible && table.hand?.isComplete == true && stake?.folded == false && (table.hand?.contenders.count ?? 0) > 1
-        let identity = compact
-            ? AnyLayout(HStackLayout(spacing: 8)) : AnyLayout(VStackLayout(spacing: 6))
-        return identity {
+        return VStack(spacing: 6) {
             ZStack {
                 Color.clear
                 if let hand = table.hand, showingCards {
@@ -331,12 +330,11 @@ private struct OpponentSeats: View {
                 }
             }
             .aspectRatio(1.45, contentMode: .fit).frame(maxWidth: portraitWidth)
-            .frame(width: compact ? portraitWidth : nil)
             .opacity(stake?.folded == true ? 0.4 : 1)
             .overlay(alignment: .bottomTrailing) {
                 if table.hand?.dealerID == seat.id { DealerMark() }
             }
-            VStack(alignment: compact ? .leading : .center, spacing: 4) {
+            VStack(alignment: .center, spacing: 4) {
                 Text(seat.profile.name).fontWeight(.medium)
                     .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true)
                     .truncationMode(.middle)
@@ -349,14 +347,14 @@ private struct OpponentSeats: View {
                 Text(status)
                     .monospacedDigit().foregroundStyle(.white.opacity(award == nil ? 0.65 : 1))
                     .lineLimit(2, reservesSpace: true).minimumScaleFactor(0.8)
-                    .multilineTextAlignment(compact ? .leading : .center)
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(height: lineHeight * 2)
                     .accessibilityLabel(spokenStatus)
             }
             .font(.subheadline)
         }
-        .frame(maxWidth: .infinity, alignment: compact ? .leading : .center)
+        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("table.opponent.\(seat.id)")
         .accessibilityValue(table.hand?.turn == seat.id
