@@ -327,13 +327,14 @@ private struct OpponentSeats: View {
                     }
                 } else {
                     TurnAvatar(text: seat.profile.avatar, hand: table.hand, duration: table.rules.turnSeconds,
-                               active: isVisible && table.hand?.turn == seat.id, size: 44, now: now, dealer: table.hand?.dealerID == seat.id)
+                               active: isVisible && table.hand?.turn == seat.id, size: 44, now: now)
                 }
             }
             .aspectRatio(1.45, contentMode: .fit).frame(maxWidth: portraitWidth)
             .frame(width: compact ? portraitWidth : nil)
+            .opacity(stake?.folded == true ? 0.4 : 1)
             .overlay(alignment: .bottomTrailing) {
-                if showingCards, table.hand?.dealerID == seat.id { DealerMark() }
+                if table.hand?.dealerID == seat.id { DealerMark() }
             }
             VStack(alignment: compact ? .leading : .center, spacing: 4) {
                 Text(seat.profile.name).fontWeight(.medium)
