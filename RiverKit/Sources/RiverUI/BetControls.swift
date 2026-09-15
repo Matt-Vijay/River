@@ -40,7 +40,7 @@ struct TableControls: View {
     var body: some View {
         VStack(spacing: 12) {
             Text(statusTitle)
-                .font(.subheadline).foregroundStyle(.secondary)
+                .font(.subheadline).foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true).truncationMode(.middle)
                 .frame(maxWidth: .infinity, minHeight: statusHeight)
