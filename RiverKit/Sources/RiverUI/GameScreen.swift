@@ -171,7 +171,7 @@ struct Board: View {
         let winners = Set(table.awards.filter { $0.won > 0 }.flatMap { $0.hand?.cards ?? [] })
         return ForEach(0..<5, id: \.self) { index in
             let card = board.indices.contains(index) ? board[index] : nil
-            PlayingCard(card: card, highlighted: card.map(winners.contains) == true)
+            PlayingCard(card: card, winning: winners.isEmpty ? nil : card.map(winners.contains))
                 .accessibilityHidden(card == nil)
         }
     }
@@ -198,6 +198,8 @@ private struct HeroSeat: View {
     var body: some View {
         let award = table.awards.first { $0.id == viewer && $0.won > 0 }
         let cards = showingCards ? table.hand?.cards(for: viewer) ?? [] : []
+        let winners: [Card]? = table.hand?.isComplete == true && (table.hand?.contenders.count ?? 0) > 1
+            ? award?.hand?.cards ?? [] : nil
         let wager = award.map { "Won \(Chips.text($0.won))" }
             ?? table.stake(viewer).flatMap { $0.bet > 0 ? "Bet \(Chips.text($0.bet))" : nil }
         let layout = textSize.isAccessibilitySize
@@ -207,7 +209,7 @@ private struct HeroSeat: View {
             HStack(spacing: textSize.isAccessibilitySize ? 8 : -16) {
                 ForEach(0..<2, id: \.self) { index in
                     let card = cards.indices.contains(index) ? cards[index] : nil
-                    PlayingCard(card: card, highlighted: card.map { award?.hand?.cards.contains($0) == true } ?? false)
+                    PlayingCard(card: card, winning: card.flatMap { winners?.contains($0) })
                 }
             }
             .frame(width: textSize.isAccessibilitySize ? min(80, scaledCardWidth) * 2 + 8 : 152,
@@ -322,7 +324,7 @@ private struct OpponentSeats: View {
                 if let hand = table.hand, showingCards {
                     let winning = award?.hand?.cards ?? []
                     HStack(spacing: 3) {
-                        ForEach(hand.cards(for: seat.id)) { PlayingCard(card: $0, highlighted: winning.contains($0)) }
+                        ForEach(hand.cards(for: seat.id)) { PlayingCard(card: $0, winning: winning.contains($0)) }
                     }
                 } else {
                     TurnAvatar(text: seat.profile.avatar, hand: table.hand, duration: table.rules.turnSeconds,

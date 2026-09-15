@@ -94,7 +94,7 @@ struct Avatar: View {
 
 struct PlayingCard: View {
     let card: Card?
-    var highlighted = false
+    var winning: Bool? = nil
 
     var body: some View {
         GeometryReader { geometry in
@@ -102,7 +102,7 @@ struct PlayingCard: View {
             let large = geometry.size.width > 68
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(highlighted ? RiverStyle.ink : .white)
+                    .fill(.white)
                 if card == nil {
                     Canvas { context, size in
                         var lines = Path()
@@ -122,18 +122,18 @@ struct PlayingCard: View {
                         if small { Spacer(minLength: 0) }
                     }
                     .foregroundStyle(card.suit.isRed
-                        ? (highlighted ? Color(red: 1, green: 0.4, blue: 0.46) : Color(red: 0.72, green: 0.08, blue: 0.16))
-                        : (highlighted ? .white : RiverStyle.ink))
+                        ? Color(red: 0.72, green: 0.08, blue: 0.16) : RiverStyle.ink)
                     .padding(small ? 4 : 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(highlighted ? Color.white : .black.opacity(0.14), lineWidth: highlighted ? 2 : 1)
+                    .strokeBorder(.black.opacity(0.14), lineWidth: 1)
             }
         }
         .aspectRatio(0.7, contentMode: .fit)
+        .colorMultiply(winning == false ? Color(white: 0.65) : .white)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel((card?.spoken ?? "Face-down card") + (highlighted ? ", Winning hand" : ""))
+        .accessibilityLabel((card?.spoken ?? "Face-down card") + (winning == true ? ", Winning hand" : ""))
     }
 }
 
