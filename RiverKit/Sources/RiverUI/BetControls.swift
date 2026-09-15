@@ -270,7 +270,13 @@ private struct RaiseComposer: View {
         }
         .lineLimit(1).minimumScaleFactor(0.75)
         .buttonStyle(RiverButtonStyle())
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(.white.opacity(amount == value ? 0.6 : 0), lineWidth: 1)
+                .allowsHitTesting(false).accessibilityHidden(true)
+        }
         .accessibilityIdentifier(id)
         .accessibilityValue("\(Chips.text(value)) chips")
+        .accessibilityAddTraits(amount == value ? .isSelected : [])
     }
 }
