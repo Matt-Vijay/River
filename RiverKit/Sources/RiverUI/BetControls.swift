@@ -54,7 +54,11 @@ struct TableControls: View {
         Group {
             if let selection = raising, legal != nil, reveal == nil {
                 RaiseComposer(bounds: selection.bounds, call: selection.call, bet: table.currentBet,
-                              pot: table.hand?.pot ?? 0, wideAmounts: wideAmounts, submit: {
+                              pot: table.hand?.pot ?? 0, wideAmounts: wideAmounts,
+                              amount: Binding(get: { raising?.amount ?? selection.amount }, set: {
+                    if raising?.id == selection.id { raising?.amount = $0 }
+                }), submit: {
+                    guard raising?.id == selection.id else { return }
                     session.act(.bet(.raiseTo($0)), on: table)
                     raising = nil
                 }, cancel: { raising = nil })
@@ -158,6 +162,14 @@ struct RaiseSelection: Identifiable {
     let id = UUID()
     let bounds: ClosedRange<Int>
     let call: Int
+    // Keep the amount when the table switches between portrait and landscape layouts.
+    var amount: Int
+
+    init(bounds: ClosedRange<Int>, call: Int) {
+        self.bounds = bounds
+        self.call = call
+        amount = bounds.lowerBound
+    }
 }
 
 private struct RaiseComposer: View {
@@ -166,27 +178,15 @@ private struct RaiseComposer: View {
     let bet: Int
     let pot: Int
     let wideAmounts: Bool
+    @Binding var amount: Int
     let submit: (Int) -> Void
     let cancel: () -> Void
-    @State private var amount: Int
     @State private var presetFeedback = false
     @ScaledMetric(relativeTo: .headline) private var amountWidth: CGFloat = 72
     @Environment(\.dynamicTypeSize) private var textSize
     private var actionTitle: String { bet == 0 ? "Bet" : "Raise to" }
     private var amountDescription: String { "\(actionTitle) \(Chips.text(amount)) chips" }
     private var stacksAmount: Bool { textSize.isAccessibilitySize || wideAmounts }
-
-    init(bounds: ClosedRange<Int>, call: Int, bet: Int, pot: Int, wideAmounts: Bool,
-         submit: @escaping (Int) -> Void, cancel: @escaping () -> Void) {
-        self.bounds = bounds
-        self.call = call
-        self.bet = bet
-        self.pot = pot
-        self.wideAmounts = wideAmounts
-        self.submit = submit
-        self.cancel = cancel
-        _amount = State(initialValue: bounds.lowerBound)
-    }
 
     var body: some View {
         Group {
