@@ -93,8 +93,9 @@ struct GameScreen: View {
 
     private func playfield(at now: Date) -> some View {
         GeometryReader { geometry in
+            let stacksTable = textSize.isAccessibilitySize || table.usesWideChipLayout
             ScrollView {
-                if geometry.size.width >= 650 && geometry.size.width > geometry.size.height && !textSize.isAccessibilitySize {
+                if geometry.size.width >= 650 && geometry.size.width > geometry.size.height && !stacksTable {
                     HStack(alignment: .center, spacing: 24) {
                         VStack(spacing: 16) {
                             OpponentSeats(table: table, seats: opponents, now: now, isVisible: isPresented,
@@ -106,7 +107,7 @@ struct GameScreen: View {
                     }
                     .padding(.horizontal, 20).padding(.vertical, 8)
                     .frame(minHeight: geometry.size.height)
-                } else if textSize.isAccessibilitySize {
+                } else if stacksTable {
                     VStack(spacing: 24) {
                         Board(table: table)
                         playerDock(at: now)
@@ -288,8 +289,7 @@ private struct OpponentSeats: View {
     var body: some View {
         // Settlement ranks every hand; evaluate it once for the whole grid.
         let awards = table.awards
-        let wideAmounts = table.rules.buyIn * table.rules.capacity >= 1_000_000
-        let columns = textSize.isAccessibilitySize ? 1 : singleRow && !wideAmounts ? 5 : 3
+        let columns = textSize.isAccessibilitySize ? 1 : singleRow && !table.usesWideChipLayout ? 5 : 3
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8, alignment: .top), count: max(1, columns)),
                   alignment: .center, spacing: 20) {
             let count = textSize.isAccessibilitySize ? (seats.lastIndex { $0 != nil }.map { $0 + 1 } ?? 0) : seats.count

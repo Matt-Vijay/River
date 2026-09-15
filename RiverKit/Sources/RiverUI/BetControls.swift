@@ -12,17 +12,17 @@ struct TableControls: View {
     @ScaledMetric(relativeTo: .subheadline) private var amountHeight: CGFloat = 18
     @ScaledMetric(relativeTo: .subheadline) private var statusHeight: CGFloat = 40
     private var betContentHeight: CGFloat { titleHeight + amountHeight + 2 }
-    private var wideAmounts: Bool { table.rules.buyIn * table.rules.capacity >= 1_000_000 }
+    private var stacksActions: Bool { table.usesWideChipLayout || textSize.isAccessibilitySize }
     private var actionHeight: CGFloat {
-        (betContentHeight + 24) * (textSize.isAccessibilitySize ? 3 : 1)
-            + (textSize.isAccessibilitySize ? 20 : 0)
+        (betContentHeight + 24) * (stacksActions ? 3 : 1)
+            + (stacksActions ? 20 : 0)
     }
     private var controlsHeight: CGFloat {
         let normalHeight = statusHeight + 12 + actionHeight
         // Reserve the same space in both modes, including all six accessibility rows.
         let rowHeight = max(52, titleHeight + 24)
         let composerHeight = textSize.isAccessibilitySize ? rowHeight * 6 + 50
-            : wideAmounts || textSize >= .xxLarge ? rowHeight * 3 + 22 : rowHeight * 2 + 12
+            : table.usesWideChipLayout || textSize >= .xxLarge ? rowHeight * 3 + 22 : rowHeight * 2 + 12
         return max(normalHeight, composerHeight)
     }
 
@@ -54,7 +54,7 @@ struct TableControls: View {
         Group {
             if let selection = raising, legal != nil, reveal == nil {
                 RaiseComposer(bounds: selection.bounds, call: selection.call, bet: table.currentBet,
-                              pot: table.hand?.pot ?? 0, wideAmounts: wideAmounts,
+                              pot: table.hand?.pot ?? 0, wideAmounts: table.usesWideChipLayout,
                               amount: Binding(get: { raising?.amount ?? selection.amount }, set: {
                     if raising?.id == selection.id { raising?.amount = $0 }
                 }), submit: {
@@ -105,7 +105,7 @@ struct TableControls: View {
                     .buttonStyle(RiverButtonStyle(prominent: true))
                     .accessibilityIdentifier("table.handoff.reveal")
             } else if let legal {
-                let layout = textSize.isAccessibilitySize
+                let layout = stacksActions
                     ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
                 layout { bets(legal) }
             } else {
@@ -115,11 +115,13 @@ struct TableControls: View {
     }
 
     @ViewBuilder private func bets(_ legal: LegalBet) -> some View {
+        let onlyAllIn = legal.raise.map { $0.lowerBound == $0.upperBound } ?? false
         betButton("Fold", id: "table.fold") { session.act(.bet(.fold), on: table) }
         betButton(legal.canCheck ? "Check" : "Call", amount: legal.canCheck ? nil : legal.call, id: "table.call", prominent: true) {
             session.act(.bet(legal.canCheck ? .check : .call), on: table)
         }
-        betButton(table.currentBet == 0 ? "Bet" : "Raise", id: "table.raise") {
+        betButton(onlyAllIn ? "All in" : table.currentBet == 0 ? "Bet" : "Raise",
+                  amount: onlyAllIn ? table.seat(session.viewerID)?.chips : nil, id: "table.raise") {
             if let bounds = legal.raise {
                 raising = RaiseSelection(bounds: bounds, call: legal.call)
             }
@@ -152,6 +154,8 @@ struct TableControls: View {
 }
 
 extension Poker.Table {
+    var usesWideChipLayout: Bool { rules.buyIn * rules.capacity >= 1_000_000 }
+
     var timeoutTitle: String {
         guard let turn = hand?.turn, let player = seat(turn), let stake = stake(turn) else { return "Resolve turn" }
         return stake.bet == currentBet ? "Check for \(player.profile.name)" : "Fold \(player.profile.name)'s hand"
