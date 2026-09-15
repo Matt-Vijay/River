@@ -87,7 +87,7 @@ struct TableControls: View {
 
     @ViewBuilder private func bets(_ legal: LegalBet) -> some View {
         betButton("Fold", id: "table.fold") { session.act(.bet(.fold), on: table) }
-        betButton(legal.canCheck ? "Check" : "Call", amount: legal.canCheck ? nil : legal.call, id: "table.call") {
+        betButton(legal.canCheck ? "Check" : "Call", amount: legal.canCheck ? nil : legal.call, id: "table.call", prominent: true) {
             session.act(.bet(legal.canCheck ? .check : .call), on: table)
         }
         betButton(table.currentBet == 0 ? "Bet" : "Raise", id: "table.raise") {
@@ -101,18 +101,20 @@ struct TableControls: View {
         .accessibilityHidden(legal.raise == nil)
     }
 
-    private func betButton(_ title: String, amount: Int? = nil, id: String, action: @escaping () -> Void) -> some View {
+    private func betButton(_ title: String, amount: Int? = nil, id: String, prominent: Bool = false,
+                           action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 2) {
                 Text(title).lineLimit(1).minimumScaleFactor(0.8).frame(height: titleHeight)
-                Text(amount.map(Chips.text) ?? " ").font(.subheadline.monospacedDigit())
-                    .lineLimit(1).minimumScaleFactor(0.5)
-                    .frame(height: amountHeight)
-                    .accessibilityHidden(amount == nil)
+                if let amount {
+                    Text(Chips.text(amount)).font(.subheadline.monospacedDigit())
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                        .frame(height: amountHeight)
+                }
             }
-            .frame(minHeight: betContentHeight)
+            .frame(height: betContentHeight)
         }
-        .buttonStyle(RiverButtonStyle())
+        .buttonStyle(RiverButtonStyle(prominent: prominent))
         .accessibilityLabel(amount.map { "\(title) \(Chips.text($0)) chips" } ?? title)
         .accessibilityIdentifier(id)
     }
