@@ -102,18 +102,7 @@ struct PlayingCard: View {
             let large = geometry.size.width > 68
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(.white)
-                if card == nil {
-                    Canvas { context, size in
-                        var lines = Path()
-                        for x in stride(from: -size.height, through: size.width, by: 7) {
-                            lines.move(to: CGPoint(x: x, y: size.height))
-                            lines.addLine(to: CGPoint(x: x + size.height, y: 0))
-                        }
-                        context.stroke(lines, with: .color(.black.opacity(0.3)), lineWidth: 1)
-                    }
-                    .padding(5).clipShape(RoundedRectangle(cornerRadius: 8))
-                }
+                    .fill(card == nil ? Color(white: 0.16) : .white)
                 if let card {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(card.label).font(.system(size: small ? 15 : large ? 32 : 24, weight: .semibold, design: .rounded))
@@ -127,7 +116,7 @@ struct PlayingCard: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(.black.opacity(0.14), lineWidth: 1)
+                    .strokeBorder(card == nil ? .white.opacity(0.25) : .black.opacity(0.14), lineWidth: 1)
             }
         }
         .aspectRatio(0.7, contentMode: .fit)

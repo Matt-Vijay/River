@@ -12,7 +12,8 @@ struct ProfileScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                TextField("Your name", text: $name)
+                TextField("Your name", text: $name,
+                          prompt: Text("Your name").foregroundStyle(.white.opacity(0.7)))
                     .font(.title3).textContentType(.nickname)
                     .autocorrectionDisabled().submitLabel(.done).focused($editing)
                     .padding(16).background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
