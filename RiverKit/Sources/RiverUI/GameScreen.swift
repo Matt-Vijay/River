@@ -54,6 +54,11 @@ struct GameScreen: View {
             }
         }
         .onChange(of: table.hand.map { $0.cards(for: session.viewerID) + $0.board }) { raising = nil }
+        .onChange(of: raising != nil) { _, isRaising in
+            if !isRaising {
+                actionReadyAfter = ContinuousClock.now.advanced(by: .milliseconds(500))
+            }
+        }
         .onChange(of: turnKey) {
             revealedTurn = nil
             // A repeated betting tap must not activate the next handoff or result action.

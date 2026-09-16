@@ -125,6 +125,7 @@ struct TableControls: View {
         }
         betButton(onlyAllIn ? "All in" : table.currentBet == 0 ? "Bet" : "Raise",
                   amount: onlyAllIn ? table.seat(session.viewerID)?.chips : nil, id: "table.raise") {
+            guard canContinue() else { return }
             if let bounds = legal.raise {
                 raising = RaiseSelection(bounds: bounds, call: legal.call)
             }
