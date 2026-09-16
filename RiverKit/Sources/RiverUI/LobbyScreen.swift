@@ -7,6 +7,12 @@ struct LobbyScreen: View {
     @Environment(\.dynamicTypeSize) private var textSize
 
     var body: some View {
+        GeometryReader { geometry in
+            lobby(wide: geometry.size.width >= 650 && geometry.size.width > geometry.size.height)
+        }
+    }
+
+    private func lobby(wide: Bool) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 let details = textSize.isAccessibilitySize
@@ -43,7 +49,7 @@ struct LobbyScreen: View {
                     }
                 }
             }
-            .padding(.horizontal, 24).padding(.bottom, 20)
+            .padding(.horizontal, 24)
         }
         .clipped()
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -58,7 +64,8 @@ struct LobbyScreen: View {
             .avoidingWindowControls()
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 12) {
+            let layout = wide ? AnyLayout(HStackLayout(spacing: 12)) : AnyLayout(VStackLayout(spacing: 12))
+            layout {
                 if session.isLocal {
                     Button(action: session.addGuest) {
                         Label("Add player", systemImage: "person.badge.plus")
@@ -78,6 +85,7 @@ struct LobbyScreen: View {
             }
             .padding(24).background(Color.black)
         }
-        .frame(maxWidth: 560)
+        .frame(maxWidth: wide ? .infinity : 560)
+        .frame(maxWidth: .infinity)
     }
 }
