@@ -26,7 +26,7 @@ public struct Profile: Codable, Equatable, Sendable {
 
 public struct Rules: Codable, Equatable, Sendable {
     public static let standard = Rules()
-    public internal(set) var capacity = 6
+    public internal(set) var capacity = 5
     public internal(set) var buyIn = 1_000
     public internal(set) var smallBlind = 5
     public internal(set) var bigBlind = 10

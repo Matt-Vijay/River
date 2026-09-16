@@ -6,8 +6,8 @@ import Testing
 struct TableTests {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
 
-    func seated(_ chips: [Int] = [1_000, 1_000, 1_000]) throws -> Table {
-        var table = Table(id: "test")
+    func seated(_ chips: [Int] = [1_000, 1_000, 1_000], rules: Rules = .standard) throws -> Table {
+        var table = Table(id: "test", rules: rules)
         for index in chips.indices {
             table = try table.applying(.join(Profile(name: "Player \(index)", avatar: "A")!), by: "p\(index)", at: now)
             table.seats[index].chips = chips[index]
@@ -17,6 +17,18 @@ struct TableTests {
 
     func act(_ bet: Bet, on table: Table) throws -> Table {
         try table.applying(.bet(bet), by: #require(table.hand?.turn), at: now)
+    }
+
+    @Test func defaultTableAcceptsFivePlayersAndRejectsSixth() throws {
+        #expect(Table().rules.capacity == 5)
+        let table = try seated(Array(repeating: 1_000, count: 5))
+        #expect(table.seats.count == 5)
+        #expect(table.isFull)
+        #expect(!table.canJoin("p5"))
+        #expect(throws: TableError.tableFull) {
+            try table.applying(.join(Profile(name: "Player 5", avatar: "A")!), by: "p5", at: now)
+        }
+        _ = try table.validated()
     }
 
     @Test func completeHand() throws {
@@ -254,7 +266,9 @@ struct TableTests {
 
     @Test func seededLegalPlayConservesChipsAndReplays() throws {
         for playerCount in 2...6 {
-            var table = try seated(Array(repeating: 1_000, count: playerCount))
+            var rules = Rules.standard
+            if playerCount == 6 { rules.capacity = 6 }
+            var table = try seated(Array(repeating: 1_000, count: playerCount), rules: rules)
             for hand in 1...12 where table.canDeal {
                 var message = try TableMessage(recording: .deal(seed: UInt64(hand)), on: table, actor: table.eligibleSeats[0].id, at: now)
                 #expect(message.verifies(after: table))

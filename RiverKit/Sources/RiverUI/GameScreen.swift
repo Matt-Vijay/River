@@ -132,7 +132,7 @@ struct GameScreen: View {
                 } else {
                     VStack(spacing: 0) {
                         OpponentSeats(table: table, seats: opponents, now: now, isVisible: isPresented,
-                                      singleRow: geometry.size.width >= 380 && textSize <= .xLarge)
+                                      singleRow: textSize <= .xLarge)
                         Spacer(minLength: 16)
                         Board(table: table)
                         Spacer(minLength: 16)
@@ -204,6 +204,12 @@ private struct HeroSeat: View {
     @Environment(\.dynamicTypeSize) private var textSize
     @ScaledMetric(relativeTo: .body) private var scaledCardWidth: CGFloat = 60
     @ScaledMetric(relativeTo: .subheadline) private var lineHeight: CGFloat = 18
+    @ScaledMetric(relativeTo: .title3) private var stackHeight: CGFloat = 24
+
+    private var handHeight: CGFloat {
+        textSize.isAccessibilitySize ? min(80, scaledCardWidth) / 0.7
+            : max(120, lineHeight * 2 + max(28, lineHeight) + stackHeight + 30)
+    }
 
     private var showingCards: Bool {
         guard isRevealed else { return false }
@@ -228,30 +234,31 @@ private struct HeroSeat: View {
                     PlayingCard(card: card, winning: card.flatMap { winners?.contains($0) })
                 }
             }
-            .frame(width: textSize.isAccessibilitySize ? min(80, scaledCardWidth) * 2 + 8 : 152,
-                   height: textSize.isAccessibilitySize ? min(80, scaledCardWidth) / 0.7 : 120)
+            .frame(width: handHeight * 1.4 + (textSize.isAccessibilitySize ? 8 : -16), height: handHeight)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(cards.isEmpty ? "" : "table.holeCards")
             .accessibilityLabel("Cards for \(table.seat(viewer)?.profile.name ?? "player")")
             .accessibilityHidden(cards.isEmpty)
             if let profile = table.seat(viewer)?.profile ?? profile {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(profile.name).fontWeight(.medium)
-                        .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true)
-                        .truncationMode(.middle)
-                        .frame(height: lineHeight * (textSize.isAccessibilitySize ? 2 : 1))
-                        .accessibilityIdentifier("table.hero.name")
+                VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
-                        TurnAvatar(text: profile.avatar, hand: table.hand, duration: table.rules.turnSeconds,
-                                   active: isVisible && table.hand?.turn == viewer, size: 32, now: now, dealer: table.hand?.dealerID == viewer)
-                        Text(table.seat(viewer).map { Chips.text($0.chips) } ?? " ").monospacedDigit()
-                            .font(.headline)
-                            .lineLimit(1).minimumScaleFactor(0.5)
-                            .accessibilityLabel(table.seat(viewer).map { "\(Chips.text($0.chips)) chips" } ?? "")
-                            .accessibilityHidden(table.seat(viewer) == nil)
-                            .accessibilityIdentifier("table.hero.stack")
+                        Avatar(text: profile.avatar, size: 28)
+                            .overlay(alignment: .bottomTrailing) {
+                                if table.hand?.dealerID == viewer { DealerMark() }
+                            }
+                        Text(profile.name).fontWeight(.medium)
+                            .lineLimit(textSize.isAccessibilitySize ? 2 : 1, reservesSpace: true)
+                            .truncationMode(.middle)
+                            .accessibilityIdentifier("table.hero.name")
                     }
-                    .frame(height: max(32, lineHeight))
+                    .frame(height: max(28, lineHeight * (textSize.isAccessibilitySize ? 2 : 1)))
+                    Text(table.seat(viewer).map { Chips.text($0.chips) } ?? " ")
+                        .font(.title3.weight(.semibold)).monospacedDigit()
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                        .frame(height: stackHeight)
+                        .accessibilityLabel(table.seat(viewer).map { "\(Chips.text($0.chips)) chips" } ?? "")
+                        .accessibilityHidden(table.seat(viewer) == nil)
+                        .accessibilityIdentifier("table.hero.stack")
                     Text(handDescription).foregroundStyle(.white.opacity(0.7))
                         .lineLimit(1).minimumScaleFactor(0.8)
                         .frame(height: lineHeight)
@@ -263,8 +270,15 @@ private struct HeroSeat: View {
                         .accessibilityHidden(wager == nil)
                 }
                 .font(.subheadline).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: textSize.isAccessibilitySize ? nil : handHeight)
                 .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    TurnProgress(shape: RoundedRectangle(cornerRadius: 8).inset(by: 1.25),
+                                 hand: table.hand, duration: table.rules.turnSeconds,
+                                 active: isVisible && table.hand?.turn == viewer, now: now)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -294,7 +308,7 @@ private struct OpponentSeats: View {
     @ScaledMetric(relativeTo: .body) private var scaledCardWidth: CGFloat = 60
     @ScaledMetric(relativeTo: .subheadline) private var lineHeight: CGFloat = 18
     private var portraitWidth: CGFloat {
-        textSize.isAccessibilitySize ? min(80, scaledCardWidth) * 2 + 3 : 64
+        textSize.isAccessibilitySize ? min(80, scaledCardWidth) * 2 + 3 : 72
     }
     private var seatHeight: CGFloat {
         let details = lineHeight * (textSize.isAccessibilitySize ? 5 : 4) + 8
@@ -304,7 +318,8 @@ private struct OpponentSeats: View {
     var body: some View {
         // Settlement ranks every hand; evaluate it once for the whole grid.
         let awards = table.awards
-        let columns = textSize.isAccessibilitySize ? 1 : singleRow && !table.usesWideChipLayout ? 5 : 3
+        let columns = textSize.isAccessibilitySize ? 1
+            : singleRow && !table.usesWideChipLayout ? table.rules.capacity - 1 : 2
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8, alignment: .top), count: max(1, columns)),
                   alignment: .center, spacing: 20) {
             let count = textSize.isAccessibilitySize ? (seats.lastIndex { $0 != nil }.map { $0 + 1 } ?? 0) : seats.count
@@ -343,7 +358,7 @@ private struct OpponentSeats: View {
                     }
                 } else {
                     TurnAvatar(text: seat.profile.avatar, hand: table.hand, duration: table.rules.turnSeconds,
-                               active: isVisible && table.hand?.turn == seat.id, size: 44, now: now)
+                               active: isVisible && table.hand?.turn == seat.id, size: 48, now: now)
                 }
             }
             .aspectRatio(1.45, contentMode: .fit).frame(maxWidth: portraitWidth)
@@ -395,26 +410,32 @@ struct TurnAvatar: View {
     let active: Bool
     let size: CGFloat
     let now: Date
-    var dealer = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Avatar(text: text, size: size)
             .overlay {
-                if active, let hand, !hand.isComplete, hand.remaining(at: now) > 0 {
-                    TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 30)) { clock in
-                        Circle().trim(from: 0, to: min(1, hand.remaining(at: clock.date) / Double(duration)))
-                            .stroke(
-                                hand.remaining(at: clock.date) <= 5 ? Color.orange : Color.mint,
-                                style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
-                            )
-                            .rotationEffect(.degrees(-90)).padding(-4)
-                    }
-                    .accessibilityHidden(true)
-                }
+                TurnProgress(shape: Circle().rotation(.degrees(-90)), hand: hand,
+                             duration: duration, active: active, now: now).padding(-4)
             }
-            .overlay(alignment: .bottomTrailing) {
-                if dealer { DealerMark() }
+    }
+}
+
+private struct TurnProgress<Outline: Shape>: View {
+    let shape: Outline
+    let hand: Hand?
+    let duration: Int
+    let active: Bool
+    let now: Date
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if active, let hand, !hand.isComplete, hand.remaining(at: now) > 0 {
+            TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 30)) { clock in
+                shape.trim(from: 0, to: min(1, hand.remaining(at: clock.date) / Double(duration)))
+                    .stroke(hand.remaining(at: clock.date) <= 5 ? Color.orange : Color.mint,
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
             }
+            .allowsHitTesting(false).accessibilityHidden(true)
+        }
     }
 }

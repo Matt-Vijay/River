@@ -199,6 +199,8 @@ struct LegacyMessage {
               (1...300).contains(game.turnDuration), game.turnDuration.rounded() == game.turnDuration,
               [0, 3, 4, 5].contains(game.board.count) else { throw TableError.invalidState }
         var rules = Rules.standard
+        // Legacy games omitted capacity and always allowed six seats.
+        rules.capacity = 6
         rules.smallBlind = game.smallBlind
         rules.bigBlind = game.bigBlind
         rules.turnSeconds = Int(game.turnDuration)
