@@ -5,7 +5,7 @@ struct GameScreen: View {
     let session: RiverSession
     let table: Poker.Table
     @State private var revealedTurn: String?
-    @State private var revealAfter = ContinuousClock.now
+    @State private var actionReadyAfter = ContinuousClock.now
     @State private var raising: RaiseSelection?
     @State private var seatIDs: [String?]
     @Environment(\.dynamicTypeSize) private var textSize
@@ -29,8 +29,11 @@ struct GameScreen: View {
         }
     }
 
-    private var turnKey: String { "\(table.hand?.number ?? 0):\(session.viewerID)" }
+    private var turnKey: String { "\(table.hand?.number ?? 0):\(session.viewerID):\(table.hand?.isComplete == true)" }
     private var isPresented: Bool { session.isVisible && !session.isCompact }
+    private var acceptsTransitionTap: Bool {
+        isPresented && ContinuousClock.now >= actionReadyAfter && session.table == table
+    }
     private var privateHandHidden: Bool {
         !isPresented || (session.isLocal && table.hand?.isComplete == false && revealedTurn != turnKey)
     }
@@ -53,8 +56,8 @@ struct GameScreen: View {
         .onChange(of: table.hand.map { $0.cards(for: session.viewerID) + $0.board }) { raising = nil }
         .onChange(of: turnKey) {
             revealedTurn = nil
-            // A repeated betting tap must not reveal the next player's hand.
-            revealAfter = ContinuousClock.now.advanced(by: .milliseconds(500))
+            // A repeated betting tap must not activate the next handoff or result action.
+            actionReadyAfter = ContinuousClock.now.advanced(by: .milliseconds(500))
             raising = nil
         }
         .onChange(of: [session.viewerID] + seatedIDs) { previous, _ in
@@ -88,8 +91,9 @@ struct GameScreen: View {
     private func playerDock(at now: Date) -> some View {
         VStack(spacing: 16) {
             TableControls(session: session, table: table, now: now, raising: $raising,
+                          canContinue: { acceptsTransitionTap },
                           reveal: privateHandHidden ? {
-                guard ContinuousClock.now >= revealAfter, session.table == table else { return }
+                guard acceptsTransitionTap else { return }
                 revealedTurn = turnKey
             } : nil)
             HeroSeat(table: table, viewer: session.viewerID, profile: session.profile,

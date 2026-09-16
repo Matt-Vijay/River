@@ -6,6 +6,7 @@ struct TableControls: View {
     let table: Poker.Table
     let now: Date
     @Binding var raising: RaiseSelection?
+    let canContinue: () -> Bool
     var reveal: (() -> Void)? = nil
     @Environment(\.dynamicTypeSize) private var textSize
     @ScaledMetric(relativeTo: .headline) private var titleHeight: CGFloat = 20
@@ -91,7 +92,9 @@ struct TableControls: View {
                 ActionButton(title: "Close table", id: "table.close", prominent: false) { session.perform(.close) }
             } else if table.hand?.isComplete == true {
                 if table.isFinished {
-                    ActionButton(title: "New table", id: "table.new") { session.perform(.newTable) }
+                    ActionButton(title: "New table", id: "table.new") {
+                        if canContinue() { session.perform(.newTable) }
+                    }
                 } else {
                     ActionButton(title: "Deal next hand", id: "table.deal", isEnabled: table.canDeal) { deal() }
                 }
@@ -150,7 +153,10 @@ struct TableControls: View {
         .accessibilityIdentifier(id)
     }
 
-    private func deal() { session.act(.deal(seed: UInt64.random(in: .min ... .max)), on: table) }
+    private func deal() {
+        guard canContinue() else { return }
+        session.act(.deal(seed: UInt64.random(in: .min ... .max)), on: table)
+    }
 }
 
 extension Poker.Table {
