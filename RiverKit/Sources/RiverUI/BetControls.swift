@@ -188,6 +188,7 @@ private struct RaiseComposer: View {
     let cancel: () -> Void
     @State private var presetFeedback = false
     @ScaledMetric(relativeTo: .headline) private var amountWidth: CGFloat = 72
+    @ScaledMetric(relativeTo: .headline) private var lineHeight: CGFloat = 20
     @Environment(\.dynamicTypeSize) private var textSize
     private var actionTitle: String { bet == 0 ? "Bet" : "Raise to" }
     private var amountDescription: String { "\(actionTitle) \(Chips.text(amount)) chips" }
@@ -219,7 +220,7 @@ private struct RaiseComposer: View {
                     .font(.headline).monospacedDigit().multilineTextAlignment(.center)
                     .lineLimit(stacksAmount ? 1 : 2).minimumScaleFactor(0.5)
                     .frame(width: stacksAmount ? nil : amountWidth)
-                    .frame(minHeight: 52)
+                    .frame(height: max(52, lineHeight * (stacksAmount ? 1 : 2)))
                     .accessibilityLabel(amountDescription)
                     .accessibilityIdentifier("raise.amount")
                 HStack(spacing: 12) {
