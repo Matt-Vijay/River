@@ -5,6 +5,7 @@ struct GameScreen: View {
     let session: RiverSession
     let table: Poker.Table
     @State private var revealedTurn: String?
+    @State private var revealAfter = ContinuousClock.now
     @State private var raising: RaiseSelection?
     @State private var seatIDs: [String?]
     @Environment(\.dynamicTypeSize) private var textSize
@@ -52,6 +53,8 @@ struct GameScreen: View {
         .onChange(of: table.hand.map { $0.cards(for: session.viewerID) + $0.board }) { raising = nil }
         .onChange(of: turnKey) {
             revealedTurn = nil
+            // A repeated betting tap must not reveal the next player's hand.
+            revealAfter = ContinuousClock.now.advanced(by: .milliseconds(500))
             raising = nil
         }
         .onChange(of: [session.viewerID] + seatedIDs) { previous, _ in
@@ -85,7 +88,10 @@ struct GameScreen: View {
     private func playerDock(at now: Date) -> some View {
         VStack(spacing: 16) {
             TableControls(session: session, table: table, now: now, raising: $raising,
-                          reveal: privateHandHidden ? { revealedTurn = turnKey } : nil)
+                          reveal: privateHandHidden ? {
+                guard ContinuousClock.now >= revealAfter, session.table == table else { return }
+                revealedTurn = turnKey
+            } : nil)
             HeroSeat(table: table, viewer: session.viewerID, profile: session.profile,
                      now: now, isLocal: session.isLocal, isRevealed: !privateHandHidden, isVisible: isPresented)
         }
