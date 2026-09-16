@@ -21,6 +21,7 @@ final class MessagesViewController: MSMessagesAppViewController {
     private var conversationID: ObjectIdentifier?
     private var generation = 0
     private var pending: Send?
+    private var unconfirmedDeal: TableMessage?
     private var joinAfterSend = false
     private var timeout: Task<Void, Never>?
     private var extensionIsActive = false
@@ -195,7 +196,13 @@ final class MessagesViewController: MSMessagesAppViewController {
                 session.surface = .table(latest.table)
                 throw TableError.stale
             }
-            let update = try TableMessage(recording: action, on: table, actor: session.localID)
+            let update: TableMessage
+            if case .deal = action, let unconfirmedDeal,
+               unconfirmedDeal.move.actor == session.localID, unconfirmedDeal.verifies(after: table) {
+                update = unconfirmedDeal
+            } else {
+                update = try TableMessage(recording: action, on: table, actor: session.localID)
+            }
             let message = MSMessage(session: source?.session ?? MSSession())
             let url = try update.url()
             message.url = url
@@ -228,6 +235,10 @@ final class MessagesViewController: MSMessagesAppViewController {
 
     private func finish(_ send: Send, error: Error?) {
         let isCurrent = pending?.message === send.message
+        // A local timeout does not cancel Apple's send. Retrying must not reshuffle the hand.
+        if isCurrent, (error as? URLError)?.code == .timedOut, case .deal = send.update.move.action {
+            unconfirmedDeal = send.update
+        }
         if isCurrent { clearSend() }
         defer {
             if isCurrent && joinAfterSend {
@@ -242,6 +253,7 @@ final class MessagesViewController: MSMessagesAppViewController {
             let newest = try history.accept(send.update,
                 sender: send.conversation.localParticipantIdentifier.uuidString,
                 localID: send.conversation.localParticipantIdentifier.uuidString)
+            if unconfirmedDeal?.fingerprint == send.update.fingerprint { unconfirmedDeal = nil }
             guard generation == send.generation, activeConversation === send.conversation else { return }
             guard isCurrent else {
                 if session.table?.id == newest.table.id { session.surface = .table(newest.table) }
