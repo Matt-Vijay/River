@@ -93,7 +93,7 @@ struct GameScreen: View {
 
     private func playfield(at now: Date) -> some View {
         GeometryReader { geometry in
-            let stacksTable = textSize.isAccessibilitySize || table.usesWideChipLayout
+            let stacksTable = textSize >= .xxLarge || table.usesWideChipLayout
             ScrollView {
                 if geometry.size.width >= 650 && geometry.size.width > geometry.size.height && !stacksTable {
                     HStack(alignment: .center, spacing: 24) {
