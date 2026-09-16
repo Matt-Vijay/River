@@ -60,7 +60,7 @@ struct LobbyScreen: View {
                     LeaveButton(session: session, table: table)
                 }
             }
-            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 28)
+            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, wide ? 12 : 28)
             .avoidingWindowControls()
         }
         .safeAreaInset(edge: .bottom) {
@@ -83,7 +83,7 @@ struct LobbyScreen: View {
                     session.act(.deal(seed: UInt64.random(in: .min ... .max)), on: table)
                 }
             }
-            .padding(24).background(Color.black)
+            .padding(.horizontal, 24).padding(.vertical, wide ? 12 : 24).background(Color.black)
         }
         .frame(maxWidth: wide ? .infinity : 560)
         .frame(maxWidth: .infinity)
